@@ -1,4 +1,5 @@
-from diffusers import StableVideoDiffusionPipeline,StableDiffusionPipeline, EulerAncestralDiscreteScheduler, DDIMScheduler
+from diffusers import StableDiffusionPipeline, EulerAncestralDiscreteScheduler, DDIMScheduler
+from pipeline_stable_video_diffusion import StableVideoDiffusionPipeline
 import torch
 import argparse
 import os, sys
@@ -11,6 +12,7 @@ from PIL import Image
 import numpy as np
 
 from diffusers.image_processor import VaeImageProcessor
+from diffusers.utils import load_image, export_to_video
 
 from tqdm.notebook import tqdm
 import torch
@@ -244,7 +246,66 @@ class StableVideoDiffusion:
             print(loss.item())
 
             return loss
+
+
+    def get_visualizations(
+        self,
+        pred_rgb,
+        step_ratio=None,
+        min_guidance_scale: float = 1.0,
+        max_guidance_scale: float = 3.0,
+    ):
+
+        batch_size = pred_rgb.shape[0]
+        pred_rgb = pred_rgb.to(self.dtype)
     
+        print(f'SVD frame size {batch_size}')
+
+
+        # interp to 512x512 to be fed into vae.
+        pred_rgb_512 = F.interpolate(pred_rgb, (512, 512), mode="bilinear", align_corners=False)
+        # encode image into latents with vae, requires grad!
+        # latents = self.pipe._encode_image(pred_rgb_512, self.device, num_videos_per_prompt=1, do_classifier_free_guidance=True)
+        latents = self.encode_image(pred_rgb_512)
+        latents = latents.unsqueeze(0)
+
+        if step_ratio is not None:
+            # dreamtime-like
+            # t = self.max_step - (self.max_step - self.min_step) * np.sqrt(step_ratio)
+            t = np.round((1 - step_ratio) * self.num_train_timesteps).clip(self.min_step, self.max_step)
+            t = torch.full((1,), t, dtype=torch.long, device=self.device)
+        else:
+            t = torch.randint(self.min_step, self.max_step + 1, (1,), dtype=torch.long, device=self.device)
+        
+        print(f'the converted t is {t}')
+
+        #w = (1 - self.alphas[t]).view(1, 1, 1, 1)
+
+
+        if True:
+            # predict the noise residual with unet, NO grad!
+            with torch.no_grad():
+                t = self.num_train_timesteps - t.item()
+                # add noise
+                noise = torch.randn_like(latents)
+                latents_noisy = self.pipe.scheduler.add_noise(latents, noise, self.pipe.scheduler.timesteps[t:t+1]) # t=0 noise;t=999 clean
+                frame = self.pipe(
+                    image=self.image,
+                    # image_embeddings=self.embeddings, 
+                    height=512,
+                    width=512,
+                    latents=latents_noisy,
+                    output_type='visual', 
+                    denoise_beg=t,
+                    denoise_end=None, #denoise_end=t + 1,
+                    min_guidance_scale=min_guidance_scale,
+                    max_guidance_scale=max_guidance_scale,
+                    num_frames=batch_size,
+                    num_inference_steps=self.num_train_timesteps
+                ).frames[0]
+            
+            return frame
+
 
 def main():
 
@@ -299,7 +360,7 @@ def main():
     torch.manual_seed(recordseed)
     latent_noise_1 = 1*torch.randn((1,4,64,64), device = device) #.to(torch.float16)
     save_name = f'{edit_prompt}_{recordseed}.png'
-    image = pipe(prompt = edit_prompt, latents = latent_noise_1, num_inference_steps=50, guidance_scale=7.5).images[0]
+    #image = pipe(prompt = edit_prompt, latents = latent_noise_1, num_inference_steps=50, guidance_scale=7.5).images[0]
     #image.save( os.path.join( save_path, save_name ) )
 
 
@@ -307,7 +368,7 @@ def main():
     torch.manual_seed(recordseed)
     latent_noise_2 = 1*torch.randn((1,4,64,64), device = device) #.to(torch.float16)
     save_name = f'{edit_prompt}_{recordseed}.png'
-    image = pipe(prompt = edit_prompt, latents = latent_noise_2, num_inference_steps=50, guidance_scale=7.5).images[0]
+    #image = pipe(prompt = edit_prompt, latents = latent_noise_2, num_inference_steps=50, guidance_scale=7.5).images[0]
     #image.save( os.path.join( save_path, save_name ) )
 
 
@@ -349,10 +410,25 @@ def main():
     print(images.shape)
     guidance_svd = StableVideoDiffusion(device, fp16=False)
     guidance_svd.image = Image.open('./outputs/a <dance1> <robot1>_99_mid_0.0.png')
-    guidance_svd.guidance_type = 'sds'
+    
+    # # check SDS grad
+    # guidance_svd.guidance_type = 'sds'
+    # grad = guidance_svd.train_step(images, step_ratio = 0.1)
+    # print(grad)
 
-    grad = guidance_svd.train_step(images, step_ratio = 0.1)
-    print(grad)
+    # # get frame denoising visualizations
+    # frames = guidance_svd.get_visualizations(images, step_ratio = 0.9)
+    # # print(len(frames))     # 11
+    # # print(type(frames[0])) # <class 'numpy.ndarray'>
+    # # print(frames[0].shape) # (512, 512, 3)
+    # print(frames[0][0:10,0,0])
+    # export_to_video(frames, "./output_videos/generated.mp4", fps=7)
+
+
+    generator = torch.manual_seed(42)
+    frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=50, decode_chunk_size=8, generator=generator).frames[0]
+    export_to_video(frames, "generated.mp4", fps=7)
+
 
 
 

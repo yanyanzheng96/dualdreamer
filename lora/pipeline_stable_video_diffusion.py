@@ -21,12 +21,12 @@ import PIL.Image
 import torch
 from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
 
-from ...image_processor import VaeImageProcessor
-from ...models import AutoencoderKLTemporalDecoder, UNetSpatioTemporalConditionModel
-from ...schedulers import EulerDiscreteScheduler
-from ...utils import BaseOutput, logging
-from ...utils.torch_utils import randn_tensor
-from ..pipeline_utils import DiffusionPipeline
+from diffusers.image_processor import VaeImageProcessor
+from diffusers.models import AutoencoderKLTemporalDecoder, UNetSpatioTemporalConditionModel
+from diffusers.schedulers import EulerDiscreteScheduler
+from diffusers.utils import BaseOutput, logging
+from diffusers.utils.torch_utils import randn_tensor
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -444,6 +444,7 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         image_latents = self._encode_vae_image(image, device, num_videos_per_prompt, do_classifier_free_guidance)
         image_latents = image_latents.to(image_embeddings.dtype)
 
+
         # cast back to fp16 if needed
         if needs_upcasting:
             self.vae.to(dtype=torch.float16)
@@ -474,20 +475,6 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
              timesteps = timesteps[denoise_beg:]
 
         print('timestep sequence is:', timesteps)
-
-        # 4. Prepare latent variables
-        num_channels_latents = self.unet.config.in_channels
-        latents = self.prepare_latents(
-            batch_size * num_videos_per_prompt,
-            num_frames,
-            num_channels_latents,
-            height,
-            width,
-            image_embeddings.dtype,
-            device,
-            generator,
-            image_latents,
-        )
 
         # 5. Prepare latent variables
         num_channels_latents = self.unet.config.in_channels
