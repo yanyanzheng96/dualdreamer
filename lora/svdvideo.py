@@ -12,9 +12,9 @@ pipe.enable_model_cpu_offload()
 image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/svd/rocket.png")
 image = image.resize((1024, 576))
 
-# generator = torch.manual_seed(42)
-# frames = pipe(image, decode_chunk_size=8, generator=generator).frames[0]
-# export_to_video(frames, "generated.mp4", fps=7)
+generator = torch.manual_seed(42)
+frames = pipe(image, decode_chunk_size=8, generator=generator).frames[0]
+export_to_video(frames, "generated.mp4", fps=7)
 
 
 
