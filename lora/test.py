@@ -1,5 +1,10 @@
-from diffusers import StableDiffusionPipeline, EulerAncestralDiscreteScheduler, DDIMScheduler
+from diffusers import StableDiffusionPipeline, DDIMScheduler
 from pipeline_stable_video_diffusion import StableVideoDiffusionPipeline
+from pipeline_stable_video_diffusion import tensor2vid
+from scheduling_euler_discrete import EulerDiscreteScheduler
+
+from pipeline_loraSDE_inference import loraSDE
+
 import torch
 import argparse
 import os, sys
@@ -63,9 +68,10 @@ class StableVideoDiffusion:
         pipe.to(device)
 
         self.pipe = pipe
+        self.pipe.scheduler = EulerDiscreteScheduler()
 
         self.num_train_timesteps = self.pipe.scheduler.config.num_train_timesteps if self.guidance_type == 'sds' else 25
-        self.pipe.scheduler.set_timesteps(self.num_train_timesteps, device=device)  # set sigma for euler discrete scheduling
+        self.pipe.scheduler.set_timesteps(self.num_train_timesteps,  device=device)  # set sigma for euler discrete scheduling
 
         self.min_step = int(self.num_train_timesteps * t_range[0])
         self.max_step = int(self.num_train_timesteps * t_range[1])
@@ -175,7 +181,50 @@ class StableVideoDiffusion:
             t = torch.randint(self.min_step, self.max_step + 1, (1,), dtype=torch.long, device=self.device)
         # print(t)
 
+
         w = (1 - self.alphas[t]).view(1, 1, 1, 1)
+        if self.guidance_type == 'sds_visualization':
+            # predict the noise residual with unet, NO grad!
+            with torch.no_grad():
+                t = self.num_train_timesteps - t.item()
+                # add noise
+                noise = torch.randn_like(latents)
+                latents_noisy, sigma = self.pipe.scheduler.add_noise_info(latents, noise, self.pipe.scheduler.timesteps[t:t+1]) # t=0 noise;t=999 clean
+                print('sigma is', sigma)
+                noise_pred = self.pipe(
+                    image=self.image,
+                    # image_embeddings=self.embeddings, 
+                    height=512,
+                    width=512,
+                    latents=latents_noisy,
+                    output_type='noise', 
+                    denoise_beg=t,
+                    denoise_end=t + 1,
+                    min_guidance_scale=min_guidance_scale,
+                    max_guidance_scale=max_guidance_scale,
+                    num_frames=batch_size,
+                    num_inference_steps=self.num_train_timesteps
+                ).frames[0]
+            
+            # target default 
+            # grad = w * (noise_pred - noise)
+            # grad = torch.nan_to_num(grad)
+            # target = (latents - 1*grad).detach()
+            # print(target[0,0,0,0:10,0])
+
+            # target by cancel prediction 
+            #target = latents_noisy - sigma * noise_pred
+            manual_latents_noisy = latents + sigma*noise
+            #print('manual_latents_noisy',manual_latents_noisy[0,0,0,0,0:10])
+            print(torch.norm( latents_noisy - (latents + sigma*noise)  ))
+            target = latents + sigma*noise - sigma*noise_pred
+
+            #self.pipe.vae.to(dtype=torch.float16)
+            target = target.to(dtype=torch.float16)
+            #frames = self.pipe(image=self.image, output_type="latent2visual", num_frames=batch_size, latent2visual=target)
+            frames = self.pipe(image=self.image, output_type="latent2visual", num_frames=batch_size, latent2visual=target)
+
+            return frames, latents
 
 
         if self.guidance_type == 'sds':
@@ -289,7 +338,7 @@ class StableVideoDiffusion:
                 # add noise
                 noise = torch.randn_like(latents)
                 latents_noisy = self.pipe.scheduler.add_noise(latents, noise, self.pipe.scheduler.timesteps[t:t+1]) # t=0 noise;t=999 clean
-                frame = self.pipe(
+                frames = self.pipe(
                     image=self.image,
                     # image_embeddings=self.embeddings, 
                     height=512,
@@ -302,9 +351,9 @@ class StableVideoDiffusion:
                     max_guidance_scale=max_guidance_scale,
                     num_frames=batch_size,
                     num_inference_steps=self.num_train_timesteps
-                ).frames[0]
+                )
             
-            return frame
+            return frames
 
 
 def main():
@@ -392,9 +441,15 @@ def main():
     # Initialize an empty list to hold the image tensors
     tensor_list = []
     directory = './outputs'
+
+    png_files = [filename for filename in os.listdir(directory) if filename.endswith('.png')]
+
+    sorted_png_files = sorted(png_files)
+    print(sorted_png_files)
+
     # Loop through each file in the directory
     #with autocast():
-    for filename in os.listdir(directory):
+    for filename in sorted_png_files:
         # Check for PNG images
         if filename.endswith('.png'):
             # Construct the full path to the image file
@@ -410,24 +465,50 @@ def main():
     print(images.shape)
     guidance_svd = StableVideoDiffusion(device, fp16=False)
     guidance_svd.image = Image.open('./outputs/a <dance1> <robot1>_99_mid_0.0.png')
-    
+    # scheduler = DDIMScheduler.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="scheduler")
+    # guidance_svd.pipe.scheduler = scheduler
+
+
     # # check SDS grad
     # guidance_svd.guidance_type = 'sds'
     # grad = guidance_svd.train_step(images, step_ratio = 0.1)
     # print(grad)
 
+
+    # check SDS grad
+    guidance_svd.guidance_type = 'sds_visualization'
+    frames, latents = guidance_svd.train_step(images, step_ratio = 0.8)
+    #print(frames[0].shape)
+    frames_int8 = []
+    for f in range(frames[0].shape[0]):
+        frame = frames[0][f]
+        if frame.dtype != np.uint8:
+            frame = (frame * 255).astype(np.uint8)
+            frames_int8.append(frame)
+    export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
+    print(latents.shape)
+
+    latent = latents[0,:,:,:,:]
+    print(latent.shape)
+    #loraSDE(latent_input = latent)
+
+
+
     # # get frame denoising visualizations
     # frames = guidance_svd.get_visualizations(images, step_ratio = 0.9)
-    # # print(len(frames))     # 11
-    # # print(type(frames[0])) # <class 'numpy.ndarray'>
-    # # print(frames[0].shape) # (512, 512, 3)
-    # print(frames[0][0:10,0,0])
-    # export_to_video(frames, "./output_videos/generated.mp4", fps=7)
+    # frames_int8 = []
+    # for f in range(frames[0].shape[0]):
+    #     frame = frames[0][f]
+    #     if frame.dtype != np.uint8:
+    #         frame = (frame * 255).astype(np.uint8)
+    #         frames_int8.append(frame)
+    # export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
 
 
-    generator = torch.manual_seed(42)
-    frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=50, decode_chunk_size=8, generator=generator).frames[0]
-    export_to_video(frames, "generated.mp4", fps=7)
+    # generator = torch.manual_seed(42)
+    # frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
+    # export_to_video(frames, "generated.mp4", fps=7)
+
 
 
 

@@ -23,7 +23,7 @@ from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
 
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.models import AutoencoderKLTemporalDecoder, UNetSpatioTemporalConditionModel
-from diffusers.schedulers import EulerDiscreteScheduler
+from diffusers.schedulers import EulerDiscreteScheduler, DDIMScheduler
 from diffusers.utils import BaseOutput, logging
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
@@ -321,8 +321,23 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         return_dict: bool = True,
         denoise_beg=None,
         denoise_end=None,
-        image_embeddings=None
+        image_embeddings=None,
+        latent2visual=None,
     ):
+        if output_type == "latent2visual":
+            # cast back to fp16 if needed
+            #if needs_upcasting:
+            if True:
+                self.vae.to(dtype=torch.float16)
+            #print(latents.shape) # torch.Size([1, 14, 4, 64, 64])
+            # print(latent2visual.shape)
+            # print(num_frames)
+            # print(decode_chunk_size)
+            frames = self.decode_latents(latent2visual, num_frames, decode_chunk_size=8) 
+            frames = tensor2vid(frames, self.image_processor, output_type=output_type)
+            
+            return frames
+
         r"""
         The call function to the pipeline for generation.
 
@@ -400,6 +415,8 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         ```
         """
         print('here in pipeline')
+        print('the initialized scheduler is', self.scheduler)
+
         # 0. Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
         width = width or self.unet.config.sample_size * self.vae_scale_factor
@@ -553,12 +570,16 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
                 self.vae.to(dtype=torch.float16)
             frames = self.decode_latents(latents, num_frames, decode_chunk_size)
             frames = tensor2vid(frames, self.image_processor, output_type=output_type)
+            print('processed by visual as output branch')
+            return frames
         elif not output_type == "latent":
             # cast back to fp16 if needed
             if needs_upcasting:
                 self.vae.to(dtype=torch.float16)
-            frames = self.decode_latents(latents, num_frames, decode_chunk_size)
+            #print(latents.shape) # torch.Size([1, 14, 4, 64, 64])
+            frames = self.decode_latents(latents, num_frames, decode_chunk_size) 
             frames = tensor2vid(frames, self.image_processor, output_type=output_type)
+            #print(frames[0]) # PIL image type
         else:
             frames = latents
 
