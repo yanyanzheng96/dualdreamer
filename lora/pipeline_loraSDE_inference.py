@@ -55,8 +55,8 @@ def loraSDE(latent_input):
 
 
     seed = 0
-    repeat_num = 2
-    insert_t = 241
+    repeat_num = 1
+    insert_t = 541
     save_path = save_path
     root_path = img_root
 
@@ -281,22 +281,17 @@ def loraSDE(latent_input):
 
                             prompt_embeds = torch.cat([negative_prompt_embeds, text_prompt_embeds])
 
+                            print(prompt_embeds.shape)      # torch.Size([2, 77, 768])
 
-                            latent_model_input = torch.cat([latents] * 2)
-                            ts = torch.cat([t.unsqueeze(0)] * 2)
+                            latent_model_input = torch.cat([latent_input] * 2)
+                            ts = torch.cat([t.unsqueeze(0)] * latent_input.shape[0] * 2)
+                            prompt_embeds = torch.cat([prompt_embeds] * latent_input.shape[0])
 
-                            print(latent_model_input.shape)
-                            print(ts.shape)
-                            print(prompt_embeds.shape)
+                            print(latent_model_input.shape) # torch.Size([22, 4, 64, 64])
+                            print(ts.shape)                 # torch.Size([22])
+                            print(prompt_embeds.shape)      # torch.Size([22, 77, 768])
 
                             # test here
-                            # latent_model_input = torch.repeat_interleave(latent_model_input, repeats=16, dim=0)
-                            # ts = torch.repeat_interleave(ts, repeats=16, dim=0)
-                            # prompt_embeds = torch.repeat_interleave(prompt_embeds, repeats=16, dim=0)
-
-                            # print(latent_model_input.shape)
-                            # print(ts.shape)
-                            # print(prompt_embeds.shape)
                             
                             noise_pred = unet(
                                 sample = latent_model_input.to(device),
@@ -331,11 +326,14 @@ def loraSDE(latent_input):
                             latents_predict = ( latents - (1 - alpha_prod_t)**(0.5) * model_output ) / (alpha_prod_t)**(0.5)
                             image = pipe.vae.decode( latents_predict.clone() / pipe.vae.config.scaling_factor, return_dict=False)[0].detach().cpu()
                             image = pipe.image_processor.postprocess(image, output_type="pil", do_denormalize=[True] * image.shape[0])
-                            image = image[0] 
+
+                            
+
+                            #image = image[0] 
                             #display(image)
 
-                        
-                        image.save( os.path.join( save_path , f'{edit_prompt}_{big_loop}.png' ) )
+                        for ig in range(len(image)):
+                            image[ig].save( os.path.join( save_path , f'{edit_prompt}_{big_loop}_{ig}.png' ) )
 
 
 
