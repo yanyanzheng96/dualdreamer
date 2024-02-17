@@ -87,8 +87,6 @@ def loraSDE(latent_input):
     tune_lora_scale(pipe.text_encoder, 1)
 
 
-
-
     # for _module, name, _child_module in _find_modules(
     #     pipe.unet, search_class=[LoraInjectedLinear, LoraInjectedConv2d]
     # ):
@@ -113,26 +111,11 @@ def loraSDE(latent_input):
     #########################################################
 
     device = "cuda"
-    # generator = torch.Generator(device=device )
-    # generator.manual_seed(10)
 
-    image = pipe.vae.decode( latent_input.clone() / pipe.vae.config.scaling_factor, return_dict=False)[0].detach().cpu()
-    image = pipe.image_processor.postprocess(image, output_type="pil", do_denormalize=[True] * image.shape[0])
-    image = image[0] 
-
-    image.save('./output_test/videovisual.png')
-
-
-    # recordseed = 9
-    # torch.manual_seed(recordseed)
-    # latent_noise_1 = 1*torch.randn((1,4,64,64), device = device).to(torch.float16)
-    # save_name = f'{edit_prompt}_{recordseed}.png'
-    # image = pipe(prompt = edit_prompt, latents = latent_noise_1, num_inference_steps=50, guidance_scale=7.5).images[0]
-    # image.save( os.path.join( save_path, save_name ) )
-
-    
-
-
+    # image = pipe.vae.decode( latent_input.clone() / pipe.vae.config.scaling_factor, return_dict=False)[0].detach().cpu()
+    # image = pipe.image_processor.postprocess(image, output_type="pil", do_denormalize=[True] * image.shape[0])
+    # image = image[0] 
+    # image.save('./output_test/videovisual.png')
 
 
     #### SDEdit #############################################
@@ -243,9 +226,18 @@ def loraSDE(latent_input):
                     for seed_s in range(1):
                         alpha_prod_t = scheduler.alphas_cumprod[torch.tensor(insert_t).to(device)]
                     
-                        randv_param = torch.randn(1, 4, 64, 64).to(device).to(torch.float16)
+                        # randv_param = torch.randn(1, 4, 64, 64).to(device).to(torch.float16)
+                        # latents = (alpha_prod_t)**(0.5) * (latents_target) + (1 - alpha_prod_t)**(0.5) * ((randv_param))
+                        # latents_t = latents.clone().detach()  # latents at timestep t 
+
+                        latents_target = latent_input ###### torch.Size([10, 4, 64, 64]) #####
+                        randv_param = torch.randn(latents_target.shape[0], 4, 64, 64).to(device).to(torch.float16)
                         latents = (alpha_prod_t)**(0.5) * (latents_target) + (1 - alpha_prod_t)**(0.5) * ((randv_param))
-                        latents_t = latents.clone().detach()  # latents at timestep t 
+                        latents_t = latents.clone().detach()  # latents at timestep t  
+
+                        print(latents.shape) # torch.Size([9, 4, 64, 64])
+
+
 
                         # start SDEedit generation 
                         prompt = prompt

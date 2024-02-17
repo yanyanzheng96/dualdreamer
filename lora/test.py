@@ -488,9 +488,9 @@ def main():
     export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
     print(latents.shape)
 
-    latent = latents[0,:,:,:,:]
-    print(latent.shape)
-    #loraSDE(latent_input = latent)
+    latents = latents[0,:,:,:,:]
+    torch.cuda.empty_cache()
+    loraSDE(latent_input = latents)
 
 
 
