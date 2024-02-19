@@ -28,8 +28,6 @@ from diffusers.utils import BaseOutput, logging
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 
-import pdb
-
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -323,23 +321,8 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         return_dict: bool = True,
         denoise_beg=None,
         denoise_end=None,
-        image_embeddings=None,
-        latent2visual=None,
+        image_embeddings=None
     ):
-        if output_type == "latent2visual":
-            # cast back to fp16 if needed
-            #if needs_upcasting:
-            if True:
-                self.vae.to(dtype=torch.float16)
-            #print(latents.shape) # torch.Size([1, 14, 4, 64, 64])
-            # print(latent2visual.shape)
-            # print(num_frames)
-            # print(decode_chunk_size)
-            frames = self.decode_latents(latent2visual, num_frames, decode_chunk_size=8) 
-            frames = tensor2vid(frames, self.image_processor, output_type=output_type)
-            
-            return frames
-
         r"""
         The call function to the pipeline for generation.
 
@@ -416,9 +399,6 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         export_to_video(frames, "generated.mp4", fps=7)
         ```
         """
-        print('here in pipeline')
-        print('the initialized scheduler is', self.scheduler)
-
         # 0. Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
         width = width or self.unet.config.sample_size * self.vae_scale_factor
@@ -463,7 +443,6 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         image_latents = self._encode_vae_image(image, device, num_videos_per_prompt, do_classifier_free_guidance)
         image_latents = image_latents.to(image_embeddings.dtype)
 
-
         # cast back to fp16 if needed
         if needs_upcasting:
             self.vae.to(dtype=torch.float16)
@@ -485,18 +464,11 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
         added_time_ids = added_time_ids.to(device)
 
         # 4. Prepare timesteps
-        print('initial timesteps is:', self.scheduler.timesteps)
-
-
         self.scheduler.set_timesteps(num_inference_steps, device=device)
         timesteps = self.scheduler.timesteps
 
-        if denoise_beg is not None and denoise_end is not None:
+        if denoise_beg is not None:
              timesteps = timesteps[denoise_beg:denoise_end]
-        if denoise_beg is not None and denoise_end is None:
-             timesteps = timesteps[denoise_beg:]
-
-        print('timestep sequence is:', timesteps)
 
         # 5. Prepare latent variables
         num_channels_latents = self.unet.config.in_channels
@@ -527,7 +499,6 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
             progress_bar = self.progress_bar(total=num_inference_steps)
         if True:
             for i, t in enumerate(timesteps):
-                print('denoising at timestep', t)
                 # expand the latents if we are doing classifier free guidance
                 latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
@@ -563,31 +534,18 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
                     if denoise_beg is None:
                         progress_bar.update()
 
-            with open('output.txt', 'w') as f:
-                print(self.image_encoder, file=f)
-            pdb.set_trace() 
         if output_type == 'noise':
             frames = noise_pred
         elif output_type == 'frame':
             if needs_upcasting:
                 self.vae.to(dtype=torch.float16)
             frames = self.decode_latents(latents, num_frames, decode_chunk_size)
-        elif output_type == 'visual':
+        elif not output_type == "latent":
             # cast back to fp16 if needed
             if needs_upcasting:
                 self.vae.to(dtype=torch.float16)
             frames = self.decode_latents(latents, num_frames, decode_chunk_size)
             frames = tensor2vid(frames, self.image_processor, output_type=output_type)
-            print('processed by visual as output branch')
-            return frames
-        elif not output_type == "latent":
-            # cast back to fp16 if needed
-            if needs_upcasting:
-                self.vae.to(dtype=torch.float16)
-            #print(latents.shape) # torch.Size([1, 14, 4, 64, 64])
-            frames = self.decode_latents(latents, num_frames, decode_chunk_size) 
-            frames = tensor2vid(frames, self.image_processor, output_type=output_type)
-            #print(frames[0]) # PIL image type
         else:
             frames = latents
 

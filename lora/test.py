@@ -68,9 +68,14 @@ class StableVideoDiffusion:
         pipe.to(device)
 
         self.pipe = pipe
-        self.pipe.scheduler = EulerDiscreteScheduler()
 
-        self.num_train_timesteps = self.pipe.scheduler.config.num_train_timesteps if self.guidance_type == 'sds' else 25
+        self.pipe.scheduler = EulerDiscreteScheduler()
+        self.pipe.scheduler = EulerDiscreteScheduler.from_pretrained(
+            "stabilityai/stable-video-diffusion-img2vid", subfolder="scheduler",torch_dtype=torch.float16, variant="fp16"
+        )
+
+        #self.num_train_timesteps = self.pipe.scheduler.config.num_train_timesteps if self.guidance_type == 'sds' else 25
+        self.num_train_timesteps = 30 # yan override
         self.pipe.scheduler.set_timesteps(self.num_train_timesteps,  device=device)  # set sigma for euler discrete scheduling
 
         self.min_step = int(self.num_train_timesteps * t_range[0])
@@ -224,7 +229,7 @@ class StableVideoDiffusion:
             #frames = self.pipe(image=self.image, output_type="latent2visual", num_frames=batch_size, latent2visual=target)
             frames = self.pipe(image=self.image, output_type="latent2visual", num_frames=batch_size, latent2visual=target)
 
-            return frames, latents
+            return frames, target
 
 
         if self.guidance_type == 'sds':
@@ -297,7 +302,7 @@ class StableVideoDiffusion:
             return loss
 
 
-    def get_visualizations(
+    def get_SDEdit_visualizations(
         self,
         pred_rgb,
         step_ratio=None,
@@ -440,7 +445,7 @@ def main():
     ])
     # Initialize an empty list to hold the image tensors
     tensor_list = []
-    directory = './outputs'
+    directory = './outputs/loraSDE_0'
 
     png_files = [filename for filename in os.listdir(directory) if filename.endswith('.png')]
 
@@ -464,20 +469,26 @@ def main():
     images = torch.cat(tensor_list, dim=0)
     print(images.shape)
     guidance_svd = StableVideoDiffusion(device, fp16=False)
-    guidance_svd.image = Image.open('./outputs/a <dance1> <robot1>_99_mid_0.0.png')
-    # scheduler = DDIMScheduler.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="scheduler")
-    # guidance_svd.pipe.scheduler = scheduler
 
 
-    # # check SDS grad
+
+
+
+
+    #########################################################################################################
+    guidance_svd.image = Image.open('./cache_dir/dance_robot/gallery_data/a _dance1_ _robot1__0.png')
+    
+
+    # test1: # check SDS grad
     # guidance_svd.guidance_type = 'sds'
     # grad = guidance_svd.train_step(images, step_ratio = 0.1)
     # print(grad)
 
 
-    # check SDS grad
+
+    # test2: # check SDS grad
     guidance_svd.guidance_type = 'sds_visualization'
-    frames, latents = guidance_svd.train_step(images, step_ratio = 0.8)
+    frames, latents = guidance_svd.train_step(images, step_ratio = 0.5)
     #print(frames[0].shape)
     frames_int8 = []
     for f in range(frames[0].shape[0]):
@@ -494,8 +505,8 @@ def main():
 
 
 
-    # # get frame denoising visualizations
-    # frames = guidance_svd.get_visualizations(images, step_ratio = 0.9)
+    # # test3: get frame denoising visualizations
+    # frames = guidance_svd.get_SDEdit_visualizations(images, step_ratio = 0.3)
     # frames_int8 = []
     # for f in range(frames[0].shape[0]):
     #     frame = frames[0][f]
@@ -505,7 +516,9 @@ def main():
     # export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
 
 
-    # generator = torch.manual_seed(42)
+
+    # # test4: original svd
+    # generator = torch.manual_seed(38)
     # frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
     # export_to_video(frames, "generated.mp4", fps=7)
 

@@ -20,6 +20,7 @@ import torch.multiprocessing as mp
 from torchvision import transforms
 
 import subprocess
+import pdb
 
 import PIL
 #if version.parse(version.parse(PIL.__version__).base_version) >= version.parse("9.1.0"):
@@ -48,15 +49,15 @@ def loraSDE(latent_input):
     ####### robot style ###########################################################
     lora_path_1 = './cache_dir/dance_robot/gallery_ckpt/final_lora.safetensors'
     alpha_1 = 1
-    save_path = './outputs'
+    save_path = './outputs/loraSDE'
     os.makedirs(save_path, exist_ok=True)
-    img_root = './outputs/a <dance1> <robot1>_99_mid_0.8.png'
+    img_root = './outputs/outputs_backup/a <dance1> <robot1>_99_mid_0.0.png'
     edit_prompt = "a <dance1> <robot1>"
 
 
     seed = 0
     repeat_num = 1
-    insert_t = 541
+    insert_t = 21
     save_path = save_path
     root_path = img_root
 
@@ -73,7 +74,7 @@ def loraSDE(latent_input):
     pipe.image_processor = VaeImageProcessor(vae_scale_factor=pipe.vae_scale_factor)    
 
 
-    #########################################################
+    # #########################################################
     ckpt_path = lora_path_1
     patch_pipe(
     pipe,
@@ -87,35 +88,15 @@ def loraSDE(latent_input):
     tune_lora_scale(pipe.text_encoder, 1)
 
 
-    # for _module, name, _child_module in _find_modules(
-    #     pipe.unet, search_class=[LoraInjectedLinear, LoraInjectedConv2d]
-    # ):
-    #     if isinstance(_child_module, LoraInjectedLinear) or isinstance(_child_module, LoraInjectedConv2d):
-    #         pass
-    #         #print('before, True')
-
-    # collapse_lora(model=pipe.unet, alpha=1.0)
-    # collapse_lora(model=pipe.text_encoder, alpha=1.0)
-
-    # monkeypatch_remove_lora(pipe.unet)
-    # monkeypatch_remove_lora(pipe.text_encoder)
-
-
-    # for _module, name, _child_module in _find_modules(
-    #     pipe.unet, search_class=[LoraInjectedLinear, LoraInjectedConv2d]
-    # ):
-    #     if isinstance(_child_module, LoraInjectedLinear) or isinstance(_child_module, LoraInjectedConv2d):
-    #         print('after, True')
-
 
     #########################################################
 
     device = "cuda"
 
-    # image = pipe.vae.decode( latent_input.clone() / pipe.vae.config.scaling_factor, return_dict=False)[0].detach().cpu()
-    # image = pipe.image_processor.postprocess(image, output_type="pil", do_denormalize=[True] * image.shape[0])
-    # image = image[0] 
-    # image.save('./output_test/videovisual.png')
+    image = pipe.vae.decode( latent_input[0:1,:,:,:].clone() / pipe.vae.config.scaling_factor, return_dict=False)[0].detach().cpu()
+    image = pipe.image_processor.postprocess(image, output_type="pil", do_denormalize=[True] * image.shape[0])
+    image = image[0] 
+    image.save('./output_test/videovisual.png')
 
 
     #### SDEdit #############################################
@@ -231,6 +212,7 @@ def loraSDE(latent_input):
                         # latents_t = latents.clone().detach()  # latents at timestep t 
 
                         latents_target = latent_input ###### torch.Size([10, 4, 64, 64]) #####
+                        #latents_target = latents_target # for sanity check
                         randv_param = torch.randn(latents_target.shape[0], 4, 64, 64).to(device).to(torch.float16)
                         latents = (alpha_prod_t)**(0.5) * (latents_target) + (1 - alpha_prod_t)**(0.5) * ((randv_param))
                         latents_t = latents.clone().detach()  # latents at timestep t  
@@ -279,13 +261,16 @@ def loraSDE(latent_input):
                             guide_prompt_embeds = guide_prompt_embeds.to(device)
                             text_prompt_embeds = guide_prompt_embeds
 
-                            prompt_embeds = torch.cat([negative_prompt_embeds, text_prompt_embeds])
+                            #prompt_embeds = torch.cat([negative_prompt_embeds, text_prompt_embeds])
+                            prompt_embeds = torch.cat([negative_prompt_embeds.repeat(latent_input.shape[0], 1, 1),  \
+                                                           text_prompt_embeds.repeat(latent_input.shape[0], 1, 1)])
+
 
                             print(prompt_embeds.shape)      # torch.Size([2, 77, 768])
 
-                            latent_model_input = torch.cat([latent_input] * 2)
+                            latent_model_input = torch.cat([latents] * 2)
                             ts = torch.cat([t.unsqueeze(0)] * latent_input.shape[0] * 2)
-                            prompt_embeds = torch.cat([prompt_embeds] * latent_input.shape[0])
+                            #prompt_embeds = torch.cat([prompt_embeds] * latent_input.shape[0])
 
                             print(latent_model_input.shape) # torch.Size([22, 4, 64, 64])
                             print(ts.shape)                 # torch.Size([22])
@@ -299,7 +284,11 @@ def loraSDE(latent_input):
                                 encoder_hidden_states=prompt_embeds.to(device),
                                 return_dict=False,
                             )[0]
+
+                            print(noise_pred.shape)
+
                             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+
                             guidance_scale = guidance_scale
                             
                             noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
@@ -335,8 +324,7 @@ def loraSDE(latent_input):
                         for ig in range(len(image)):
                             image[ig].save( os.path.join( save_path , f'{edit_prompt}_{big_loop}_{ig}.png' ) )
 
-
-
+    pdb.set_trace() 
     return
 
 
