@@ -48,15 +48,15 @@ def main():
     ####### robot style ###########################################################
     lora_path_1 = './cache_dir/dance_robot/gallery_ckpt/final_lora.safetensors'
     alpha_1 = 1
-    save_path = './outputs'
+    save_path = './output_sde'
     os.makedirs(save_path, exist_ok=True)
-    img_root = './outputs/a <dance1> <robot1>_99_mid_0.8.png'
-    edit_prompt = "a <dance1> <robot1>"
+    img_root = './output_sde/swimming_fish.png'
+    edit_prompt = "a red swimming fish"
 
 
     seed = 0
-    repeat_num = 2
-    insert_t = 981
+    repeat_num = 5
+    insert_t = 521
     save_path = save_path
     root_path = img_root
 
@@ -73,18 +73,18 @@ def main():
     pipe.image_processor = VaeImageProcessor(vae_scale_factor=pipe.vae_scale_factor)    
 
 
-    #########################################################
-    ckpt_path = lora_path_1
-    patch_pipe(
-    pipe,
-    ckpt_path,
-    patch_text=True,
-    patch_ti=True,
-    patch_unet=True,
-    )
+    #### patch lora #######################################
+    # ckpt_path = lora_path_1
+    # patch_pipe(
+    # pipe,
+    # ckpt_path,
+    # patch_text=True,
+    # patch_ti=True,
+    # patch_unet=True,
+    # )
 
-    tune_lora_scale(pipe.unet, 1)
-    tune_lora_scale(pipe.text_encoder, 1)
+    # tune_lora_scale(pipe.unet, 1)
+    # tune_lora_scale(pipe.text_encoder, 1)
 
 
 
@@ -116,36 +116,13 @@ def main():
     # generator = torch.Generator(device=device )
     # generator.manual_seed(10)
 
-    recordseed = 9
-    torch.manual_seed(recordseed)
-    latent_noise_1 = 1*torch.randn((1,4,64,64), device = device).to(torch.float16)
-    save_name = f'{edit_prompt}_{recordseed}.png'
-    image = pipe(prompt = edit_prompt, latents = latent_noise_1, num_inference_steps=50, guidance_scale=7.5).images[0]
-    image.save( os.path.join( save_path, save_name ) )
-
-    
-
-
-    return 
-
-
-    # recordseed = 99
+    # recordseed = 9
     # torch.manual_seed(recordseed)
-    # latent_noise_2 = 1*torch.randn((1,4,64,64), device = device).to(torch.float16)
+    # latent_noise_1 = 1*torch.randn((1,4,64,64), device = device).to(torch.float16)
     # save_name = f'{edit_prompt}_{recordseed}.png'
-    # image = pipe(prompt = edit_prompt, latents = latent_noise_2, num_inference_steps=50, guidance_scale=7.5).images[0]
+    # image = pipe(prompt = edit_prompt, latents = latent_noise_1, num_inference_steps=50, guidance_scale=7.5).images[0]
     # image.save( os.path.join( save_path, save_name ) )
 
-
-    # sequence_arange = np.arange(0.8, 0.91, 0.05)
-    # for s in sequence_arange:
-    #     print( np.round_(s, 2) )
-    #     s = np.round_(s, 2)
-
-    #     latent_noise_mid = s*latent_noise_1 + (1-s)*latent_noise_2
-    #     save_name = f'{edit_prompt}_{recordseed}_mid_{s}.png'
-    #     image = pipe(prompt = edit_prompt, latents = latent_noise_mid, num_inference_steps=50, guidance_scale=7.5).images[0]
-    #     image.save( os.path.join( save_path, save_name ) )
 
     #### SDEdit #############################################
 

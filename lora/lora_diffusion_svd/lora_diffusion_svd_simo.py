@@ -339,7 +339,7 @@ def inject_trainable_lora_extended(
         model, target_replace_module, search_class=[nn.Linear, LoraInjectedLinear, nn.Conv2d, LoraInjectedConv2d]
     ):  
         if isinstance(_child_module, nn.Linear):
-            print('inject lora on linear')
+            #print('inject lora on linear')
             weight = _child_module.weight
             bias = _child_module.bias
             _tmp = LoraInjectedLinear(
@@ -352,7 +352,7 @@ def inject_trainable_lora_extended(
             if bias is not None:
                 _tmp.linear.bias = bias
         elif isinstance(_child_module, nn.Conv2d):      
-            print('inject lora on conv2d') 
+            #print('inject lora on conv2d') 
             weight = _child_module.weight
             bias = _child_module.bias
             _tmp = LoraInjectedConv2d(

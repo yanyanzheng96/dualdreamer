@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 import torch.nn.functional as F
 import torch.utils.checkpoint
 import transformers
@@ -26,7 +27,7 @@ from tqdm.auto import tqdm
 from transformers import AutoTokenizer, PretrainedConfig, CLIPTextModel, CLIPTokenizer
 import diffusers
 from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
-from diffusers import StableVideoDiffusionPipeline
+#from diffusers import StableVideoDiffusionPipeline
 from diffusers.utils import load_image, export_to_video
 
 from diffusers.loaders import LoraLoaderMixin
@@ -36,6 +37,19 @@ from diffusers.training_utils import compute_snr
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
 
+from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
+
+from diffusers.image_processor import VaeImageProcessor
+from diffusers.models import AutoencoderKLTemporalDecoder, UNetSpatioTemporalConditionModel
+from diffusers.schedulers import EulerDiscreteScheduler, DDIMScheduler
+from diffusers.utils import BaseOutput, logging
+from diffusers.utils.torch_utils import randn_tensor
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+
+from pipeline_stable_video_diffusion import StableVideoDiffusionPipeline
+from pipeline_stable_video_diffusion import tensor2vid
+
+import cv2
 import json
 import math
 from itertools import groupby
@@ -43,6 +57,8 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 import numpy as np
 import PIL
+from PIL import Image
+
 PIL_INTERPOLATION = {
         "linear": PIL.Image.Resampling.BILINEAR,
         "bilinear": PIL.Image.Resampling.BILINEAR,
@@ -50,6 +66,12 @@ PIL_INTERPOLATION = {
         "lanczos": PIL.Image.Resampling.LANCZOS,
         "nearest": PIL.Image.Resampling.NEAREST,
     }
+
+from torchvision import transforms
+transform = transforms.Compose([
+    transforms.ToTensor(),  # Converts the image to a tensor and scales to [0, 1]
+])
+
 
 try:
     from safetensors.torch import safe_open
@@ -72,6 +94,71 @@ except ImportError:
 from lora_diffusion_svd_simo import (inject_trainable_lora,
                                      inject_trainable_lora_extended
                                     )
+
+
+################################### load svd pipe #################################################################################
+pipe = StableVideoDiffusionPipeline.from_pretrained("stabilityai/stable-video-diffusion-img2vid-xt", torch_dtype=torch.float16, variant="fp16").to("cuda")
+#pipe.enable_model_cpu_offload()
+
+
+
+######## utils definition #########################
+def video2latent(video_path):
+    # Use OpenCV to read the video
+    cap = cv2.VideoCapture(video_path)
+    frame_number = 0
+    png_files = []
+    temp_directory = './training_data/test'
+    while True:
+        # Read a new frame
+        success, frame = cap.read()
+        print(success)
+        if not success:
+            break  # If no frame is read, break the loop
+        
+        png_files.append(frame)
+
+        # Construct the filename of the frame image
+        frame_filename = os.path.join(temp_directory, f"frame_{frame_number:04d}.png")
+        # Save the frame as an image
+        cv2.imwrite(frame_filename, frame)
+        frame_number += 1
+    # Release the video capture object
+    cap.release()
+
+
+    png_files = [filename for filename in os.listdir(temp_directory) if filename.endswith('.png')]
+    sorted_png_files = sorted(png_files)  ########## yan test ########################################
+    tensor_list = []
+    for filename in sorted_png_files:
+        # Check for PNG images
+        if filename.endswith('.png'):
+            # Construct the full path to the image file
+            file_path = os.path.join(temp_directory, filename)
+            # Open the image and convert it to RGB
+            image = Image.open(file_path).convert('RGB')
+            # Apply the transform to the image
+            image_tensor = transform(image).unsqueeze(0)
+            # Append the image tensor to the list
+            tensor_list.append(image_tensor)
+    images = torch.cat(tensor_list, dim=0)
+
+
+    images = images.to(torch.float16) # yan: the bux has been fixed here
+    images = images * 2 -1
+    images = images.to(pipe.dtype).to(pipe.device) # yan fix type bug
+    latent = pipe._encode_vae_image(images, pipe.device, num_videos_per_prompt=1, do_classifier_free_guidance=False)
+    latent = pipe.vae.config.scaling_factor * latent
+
+    latent = latent.unsqueeze(0)
+    num_frames = len(sorted_png_files)
+
+    return latent, num_frames
+
+
+
+
+
 
 
 
@@ -154,9 +241,7 @@ def parse_args(input_args=None):
 
 
 def train(args):
-    ################################### load svd pipe #################################################################################
-    pipe = StableVideoDiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, torch_dtype=torch.float16, variant="fp16")
-    pipe.enable_model_cpu_offload()
+
 
     ################################### initialize the optimizer ######################################################################
     if True:
@@ -234,9 +319,151 @@ def train(args):
         )
 
         #print(len(unet_lora_params))  # 652(linear) loras for inject_trainable_lora and 768(linear and conv2d) for inject_trainable_lora_extended
+        unet_lr = 1e-4
+        params_to_optimize = [
+            {"params": itertools.chain(*unet_lora_params), "lr": unet_lr},
+        ]
+
+
+        weight_decay_lora = 0.001
+        lora_optimizers = optim.AdamW(params_to_optimize, weight_decay=weight_decay_lora)
+
+        # breakpoint()
+        #pipe.unet.train()
+        
+
+        lr_scheduler_lora = "linear"
+        lr_warmup_steps_lora = 0
+        max_train_steps_tuning = 1000
+        lr_scheduler_lora = get_scheduler(
+            lr_scheduler_lora,
+            optimizer=lora_optimizers,
+            num_warmup_steps=lr_warmup_steps_lora,
+            num_training_steps=max_train_steps_tuning,
+        )
+
+
+        ### preprocess training data
+        image_directory = './training_data/images'
+        image_count = sum(1 for filename in os.listdir(image_directory) if filename.endswith('.png'))
+        video_directory = './training_data/videos'
+        video_count = sum(1 for filename in os.listdir(video_directory) if filename.endswith('.mp4'))
+        
+        assert image_count == video_count, "image_count not equal to video_count in training data"
+
+        os.makedirs('./training_data/videos_latents', exist_ok = True)
+        for i in range(video_count):
+            video_path = f'./training_data/videos/video_{i}.mp4'
+            latent, num_frames = video2latent(video_path)
+            torch.save(latent, os.path.join('./training_data/videos_latents', f'latent_{i}.pt'))
 
 
 
+        optimizer = lora_optimizers
+        num_timesteps = 30
+        pipe.scheduler.set_timesteps(num_timesteps,  device=pipe.device)
+        height = 512
+        width = 512
+        for iter in range(10):
+            
+            print(video_count)
+            # load training data
+            randint = random.randint(0, video_count-1)
+            image_path = f'./training_data/images/image_{randint}.png'
+            latent_path = f'./training_data/videos_latents/latent_{randint}.pt'
+
+            latents = torch.load(latent_path)
+            image_load = Image.open(image_path)
+
+            # process training data and build loss
+            image_embeddings = pipe._encode_image(image_load, pipe.device, 1, do_classifier_free_guidance=False)
+            
+            image_load = pipe.image_processor.preprocess(image_load, height=height, width=width)
+            noise = randn_tensor(image_load.shape, device=image_load.device, dtype=image_load.dtype)
+            noise_aug_strength = 0.02
+            image_load = image_load + noise_aug_strength * noise
+            needs_upcasting = pipe.vae.dtype == torch.float16 and pipe.vae.config.force_upcast
+            # if needs_upcasting:
+            #     self.vae.to(dtype=torch.float32)
+            image_latent = pipe._encode_vae_image(image_load, pipe.device, 1, do_classifier_free_guidance=False)
+            image_latent = image_latent.to(pipe.dtype) # torch.Size([1, 4, 64, 64])
+            image_latents = image_latent.unsqueeze(1).repeat(1, num_frames, 1, 1, 1) # torch.Size([1, 14, 4, 64, 64])
+
+
+            added_time_ids = pipe._get_add_time_ids(
+                fps = 7-1,
+                motion_bucket_id = 127,
+                noise_aug_strength = 0.02,
+                dtype = image_embeddings.dtype ,
+                batch_size = 1,
+                num_videos_per_prompt = 1,
+                do_classifier_free_guidance = False,
+                )
+            added_time_ids = added_time_ids.to(pipe.device)
+
+
+           
+            r = torch.randint(1, 30, (1,), dtype=torch.long, device=pipe.device)
+            noise = torch.randn_like(latents).to(pipe.device).to(torch.float16)
+            target = noise # torch.Size([1, 14, 4, 64, 64])
+            latents_noisy = pipe.scheduler.add_noise(latents, noise, pipe.scheduler.timesteps[r:r+1]) # torch.Size([1, 14, 4, 64, 64]) # t=0 noise;t=999 clean
+            
+
+            timesteps = pipe.scheduler.timesteps[r:r+1]
+            t = timesteps[0]
+
+            ##latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            latent_model_input = latents
+            latent_model_input = pipe.scheduler.scale_model_input(latent_model_input, t)
+            # Concatenate image_latents over channels dimention
+            latent_model_input = torch.cat([latent_model_input, image_latents], dim=2)
+            # predict the noise residual
+            noise_pred = pipe.unet(
+                latent_model_input,
+                t,
+                encoder_hidden_states=image_embeddings,
+                added_time_ids=added_time_ids,
+                return_dict=False,
+            )[0]
+
+            print(noise_pred.shape)
+
+            # noise_pred = pipe(
+            #     image=image_load,
+            #     # image_embeddings=self.embeddings, 
+            #     height=512,
+            #     width=512,
+            #     latents=latents_noisy,
+            #     output_type='noise', 
+            #     denoise_beg=t,
+            #     denoise_end=t + 1,
+            #     min_guidance_scale=1.0,
+            #     max_guidance_scale=3.0,
+            #     num_frames=num_frames,
+            #     num_inference_steps=num_timesteps
+            # ).frames[0]
+
+            # from torchviz import make_dot
+            # make_dot(noise_pred)
+
+            loss = F.mse_loss(noise_pred.unsqueeze(0).float(), target.float(), reduction="none").mean()
+            # loss.requires_grad = True
+            # breakpoint()
+
+            # build loss and backpropagation
+            lr_scheduler_lora.step()
+            optimizer.zero_grad()
+
+            noise = torch.randn((1,4,64,64))
+            #loss = torch.mean( pipe.unet())
+            #loss_sum += loss.detach().item()
+            print(loss)
+
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                itertools.chain(unet.parameters()), 1.0
+            )
+            optimizer.step()
 
 
 

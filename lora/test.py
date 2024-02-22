@@ -476,7 +476,7 @@ def main():
 
 
     #########################################################################################################
-    guidance_svd.image = Image.open('./cache_dir/dance_robot/gallery_data/a _dance1_ _robot1__0.png')
+    guidance_svd.image = Image.open('./output_sde/a red swimming fish_0.png')
     
 
     # test1: # check SDS grad
@@ -486,22 +486,22 @@ def main():
 
 
 
-    # test2: # check SDS grad
-    guidance_svd.guidance_type = 'sds_visualization'
-    frames, latents = guidance_svd.train_step(images, step_ratio = 0.5)
-    #print(frames[0].shape)
-    frames_int8 = []
-    for f in range(frames[0].shape[0]):
-        frame = frames[0][f]
-        if frame.dtype != np.uint8:
-            frame = (frame * 255).astype(np.uint8)
-            frames_int8.append(frame)
-    export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
-    print(latents.shape)
+    # # test2: # check SDS grad
+    # guidance_svd.guidance_type = 'sds_visualization'
+    # frames, latents = guidance_svd.train_step(images, step_ratio = 0.5)
+    # #print(frames[0].shape)
+    # frames_int8 = []
+    # for f in range(frames[0].shape[0]):
+    #     frame = frames[0][f]
+    #     if frame.dtype != np.uint8:
+    #         frame = (frame * 255).astype(np.uint8)
+    #         frames_int8.append(frame)
+    # export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
+    # print(latents.shape)
 
-    latents = latents[0,:,:,:,:]
-    torch.cuda.empty_cache()
-    loraSDE(latent_input = latents)
+    # latents = latents[0,:,:,:,:]
+    # torch.cuda.empty_cache()
+    # loraSDE(latent_input = latents)
 
 
 
@@ -517,10 +517,12 @@ def main():
 
 
 
-    # # test4: original svd
-    # generator = torch.manual_seed(38)
-    # frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
-    # export_to_video(frames, "generated.mp4", fps=7)
+    # test4: original svd
+    guidance_svd.image = Image.open('./output_sde/a red swimming fish_2.png')
+
+    generator = torch.manual_seed(0)
+    frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
+    export_to_video(frames, "./output_sde/swimming_fish.mp4", fps=7)
 
 
 
