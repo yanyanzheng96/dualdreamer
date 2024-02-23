@@ -51,7 +51,7 @@ def main():
     save_path = './output_sde'
     os.makedirs(save_path, exist_ok=True)
     img_root = './output_sde/swimming_fish.png'
-    edit_prompt = "a red swimming fish"
+    edit_prompt = "a black fish"
 
 
     seed = 0

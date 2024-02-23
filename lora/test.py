@@ -42,6 +42,51 @@ PIL_INTERPOLATION = {
         "nearest": PIL.Image.Resampling.NEAREST,
     }
 
+# Define a transform to convert images to tensors
+transform = transforms.Compose([
+    transforms.ToTensor(),  # Converts the image to a tensor and scales to [0, 1]
+])
+
+
+
+def export_to_images(frames, dir):
+    os.makedirs(dir, exist_ok=True)
+    images = []
+
+    if isinstance(frames[0], Image.Image):
+        for f in range( len(frames) ):
+            frame_pil = frames[f]
+            frame_pil.save( os.path.join( dir, f'image_{f}.png' ) )
+    return images
+
+    if frames[0].dtype == np.uint8:
+        print("The array is of type np.uint8. So we can convert to images")
+        for f in range( len(frames) ):
+            frame_pil = Image.fromarray(frames[f])
+            images.append( frame_pil )
+            frame_pil.save( os.path.join( dir, f'image_{f}.png' ) )
+    return images
+
+def images2tensor(directory):
+    png_files = [filename for filename in os.listdir(directory) if filename.endswith('.png')]
+    sorted_png_files = sorted(png_files)
+    tensor_list = []
+    # Loop through each file in the directory
+    #with autocast():
+    for filename in sorted_png_files:
+        # Check for PNG images
+        if filename.endswith('.png'):
+            # Construct the full path to the image file
+            file_path = os.path.join(directory, filename)
+            # Open the image and convert it to RGB
+            image = Image.open(file_path).convert('RGB')
+            # Apply the transform to the image
+            image_tensor = transform(image).unsqueeze(0)
+            # Append the image tensor to the list
+            tensor_list.append(image_tensor)
+    images = torch.cat(tensor_list, dim=0)
+    return images
+
 
 class StableVideoDiffusion:
     def __init__(
@@ -308,6 +353,7 @@ class StableVideoDiffusion:
         step_ratio=None,
         min_guidance_scale: float = 1.0,
         max_guidance_scale: float = 3.0,
+        edit_image_prompt=None,
     ):
 
         batch_size = pred_rgb.shape[0]
@@ -344,7 +390,7 @@ class StableVideoDiffusion:
                 noise = torch.randn_like(latents)
                 latents_noisy = self.pipe.scheduler.add_noise(latents, noise, self.pipe.scheduler.timesteps[t:t+1]) # t=0 noise;t=999 clean
                 frames = self.pipe(
-                    image=self.image,
+                    image = edit_image_prompt, #image=self.image,
                     # image_embeddings=self.embeddings, 
                     height=512,
                     width=512,
@@ -439,10 +485,7 @@ def main():
 
 
     # read from './output' to save images as list
-    # Define a transform to convert images to tensors
-    transform = transforms.Compose([
-        transforms.ToTensor(),  # Converts the image to a tensor and scales to [0, 1]
-    ])
+
     # Initialize an empty list to hold the image tensors
     tensor_list = []
     directory = './outputs/loraSDE_0'
@@ -505,24 +548,30 @@ def main():
 
 
 
-    # # test3: get frame denoising visualizations
-    # frames = guidance_svd.get_SDEdit_visualizations(images, step_ratio = 0.3)
-    # frames_int8 = []
-    # for f in range(frames[0].shape[0]):
-    #     frame = frames[0][f]
-    #     if frame.dtype != np.uint8:
-    #         frame = (frame * 255).astype(np.uint8)
-    #         frames_int8.append(frame)
-    # export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
-
-
-
-    # test4: original svd
-    guidance_svd.image = Image.open('./output_sde/a red swimming fish_2.png')
+    # test3: get frame denoising visualizations
+    images = images2tensor('./output_videos/test')
+    edit_image_prompt = Image.open('./output_sde/a black swimming fish_2.png')
 
     generator = torch.manual_seed(0)
-    frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
-    export_to_video(frames, "./output_sde/swimming_fish.mp4", fps=7)
+    frames = guidance_svd.get_SDEdit_visualizations(pred_rgb = images, step_ratio = 0.2, edit_image_prompt = edit_image_prompt)
+    frames_int8 = []
+    for f in range(frames[0].shape[0]):
+        frame = frames[0][f]
+        if frame.dtype != np.uint8:
+            frame = (frame * 255).astype(np.uint8)
+            frames_int8.append(frame)
+    export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
+    #images = export_to_images(frames_int8, "./output_videos/test")
+
+
+
+    # # test4: original svd
+    # guidance_svd.image = Image.open('./output_sde/a black fish_2.png')
+
+    # generator = torch.manual_seed(0)
+    # frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
+    # export_to_video(frames, "./output_sde/swimming_fish.mp4", fps=7)
+    # #images = export_to_images(frames, "./output_videos/test")
 
 
 
@@ -572,16 +621,6 @@ if __name__ == "__main__":
 #     optimizer = torch.optim.Adam([latents_parameter], lr=0.01)
 
 #     return latents_parameter, optimizer
-
-
-
-
-
-
-
-
-
-
 
 
 
