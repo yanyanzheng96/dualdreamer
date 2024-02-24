@@ -548,30 +548,32 @@ def main():
 
 
 
-    # test3: get frame denoising visualizations
-    images = images2tensor('./output_videos/test')
-    edit_image_prompt = Image.open('./output_sde/a black swimming fish_2.png')
+    # # test3: get frame denoising visualizations
+    # images = images2tensor('./output_videos/test')
+    # #edit_image_prompt = Image.open('./output_sde/a black swimming fish_2.png')
+    # edit_image_prompt = Image.open('./output_videos/test/image_0.png')
 
-    generator = torch.manual_seed(0)
-    frames = guidance_svd.get_SDEdit_visualizations(pred_rgb = images, step_ratio = 0.2, edit_image_prompt = edit_image_prompt)
-    frames_int8 = []
-    for f in range(frames[0].shape[0]):
-        frame = frames[0][f]
-        if frame.dtype != np.uint8:
-            frame = (frame * 255).astype(np.uint8)
-            frames_int8.append(frame)
-    export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
-    #images = export_to_images(frames_int8, "./output_videos/test")
-
-
-
-    # # test4: original svd
-    # guidance_svd.image = Image.open('./output_sde/a black fish_2.png')
 
     # generator = torch.manual_seed(0)
-    # frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
-    # export_to_video(frames, "./output_sde/swimming_fish.mp4", fps=7)
-    # #images = export_to_images(frames, "./output_videos/test")
+    # frames = guidance_svd.get_SDEdit_visualizations(pred_rgb = images, step_ratio = 0.9, edit_image_prompt = edit_image_prompt)
+    # frames_int8 = []
+    # for f in range(frames[0].shape[0]):
+    #     frame = frames[0][f]
+    #     if frame.dtype != np.uint8:
+    #         frame = (frame * 255).astype(np.uint8)
+    #         frames_int8.append(frame)
+    # export_to_video(frames_int8, "./output_videos/generated.mp4", fps=7)
+    # #images = export_to_images(frames_int8, "./output_videos/test")
+
+
+
+    # test4: original svd
+    guidance_svd.image = Image.open('./output_sde/sdxl_fish.png')
+
+    generator = torch.manual_seed(0)
+    frames = guidance_svd.pipe(guidance_svd.image, height = 512, width = 512, num_inference_steps=30, decode_chunk_size=8, generator=generator).frames[0]
+    export_to_video(frames, "./output_sde/sdxl_fish_0.mp4", fps=7)
+    #images = export_to_images(frames, "./output_videos/test")
 
 
 

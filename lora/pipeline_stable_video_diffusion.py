@@ -565,7 +565,7 @@ class StableVideoDiffusionPipeline(DiffusionPipeline):
 
             with open('output.txt', 'w') as f:
                 print(self.image_encoder, file=f)
-            pdb.set_trace() 
+            #pdb.set_trace() 
         if output_type == 'noise':
             frames = noise_pred
         elif output_type == 'frame':

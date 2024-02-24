@@ -50,13 +50,13 @@ def main():
     alpha_1 = 1
     save_path = './output_sde'
     os.makedirs(save_path, exist_ok=True)
-    img_root = './output_sde/swimming_fish.png'
-    edit_prompt = "a black fish"
+    img_root = './output_sde/a blooming flower.png'
+    edit_prompt = "white flower"
 
 
     seed = 0
     repeat_num = 5
-    insert_t = 521
+    insert_t = 321
     save_path = save_path
     root_path = img_root
 
