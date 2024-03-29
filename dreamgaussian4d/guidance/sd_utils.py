@@ -16,6 +16,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from PIL import Image
+
+
 
 def seed_everything(seed):
     torch.manual_seed(seed)
@@ -53,7 +56,7 @@ class StableDiffusion(nn.Module):
                 f"Stable-diffusion version {self.sd_version} not supported."
             )
 
-        self.dtype = torch.float16 if fp16 else torch.float32
+        self.dtype = torch.float32
 
         # Create model
         pipe = StableDiffusionPipeline.from_pretrained(
@@ -93,6 +96,17 @@ class StableDiffusion(nn.Module):
         neg_embeds = self.encode_text(negative_prompts)
         self.embeddings = torch.cat([neg_embeds, pos_embeds], dim=0)  # [2, 77, 768]
     
+    @torch.no_grad()
+    def get_text_embeds_batch(self, prompts, negative_prompts, latents):
+        pos_embeds = self.encode_text(prompts)  # [1, 77, 768]
+        neg_embeds = self.encode_text(negative_prompts)
+
+        batch_embeds = torch.cat([neg_embeds.repeat(latents.shape[0], 1, 1),  \
+                                  pos_embeds.repeat(latents.shape[0], 1, 1)])
+
+        self.embeddings = batch_embeds  # [2, 77, 768]
+
+
     def encode_text(self, prompt):
         # prompt: [str]
         inputs = self.tokenizer(
@@ -289,6 +303,441 @@ class StableDiffusion(nn.Module):
         imgs = (imgs * 255).round().astype("uint8")
 
         return imgs
+
+
+    def get_inverse_loop(self, pred_rgb, prompts, negative_prompts, back_ratio_list=[0.5], guidance_scale=7.5, as_latent=False):
+
+        gap = 20
+        start = 1
+        limit = 999
+
+        num_elements = (limit - start) // gap + 1
+        timestep_path = [start + gap * i for i in range(num_elements)]
+
+        back_timeindex_list = []
+        for back_ratio in back_ratio_list:
+            t = np.round(back_ratio * self.num_train_timesteps)
+            closest_index, closest_timestep = min(enumerate(timestep_path), key=lambda x: abs(x[1] - t))
+            back_timeindex_list.append(closest_index)
+
+        pred_rgb = pred_rgb.to(self.dtype)
+        batch_size = pred_rgb.shape[0]
+        if as_latent:
+            latents = F.interpolate(pred_rgb, (32, 32), mode='bilinear', align_corners=False) * 2 - 1
+        else:
+            pred_rgb_256 = F.interpolate(pred_rgb, (512, 512), mode='bilinear', align_corners=False)
+            latents_grad = self.encode_imgs(pred_rgb_256.to(self.dtype))
+        
+
+        latents = latents_grad.detach()
+        self.get_text_embeds_batch(prompts, negative_prompts, latents)
+        dict_latents4predict = {}
+        for timeindex in back_timeindex_list:
+            dict_latents4predict[timeindex] = None
+        dict_latents4predict[1] = latents
+
+        self.scheduler.alphas_cumprod = self.scheduler.alphas_cumprod.to(self.device)
+        with torch.no_grad():
+            for i, t in enumerate(timestep_path[0:back_timeindex_list[-1]]):
+                print(i,t)
+                ####### get inverse coefficient 
+                t = torch.tensor(t, device = self.device)
+
+                t_back = t + gap
+                alpha_prod_t = self.scheduler.alphas_cumprod[t]
+                alpha_prod_t_back = self.scheduler.alphas_cumprod[t_back] 
+                beta_prod_t = 1 - alpha_prod_t
+                epsilon_coefficient = (1 - alpha_prod_t_back)**(0.5) / (alpha_prod_t_back)**(0.5) - (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5)
+
+                ######## get inverse direction 
+                t = torch.full((batch_size,), t, dtype=torch.long, device=self.device)
+                t_in = torch.cat([t] * 2)
+                x_in = torch.cat([latents] * 2)
+
+                noise_pred = self.unet(
+                    x_in, t_in, encoder_hidden_states=self.embeddings,
+                ).sample
+    
+
+                noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+
+                ######## get back node 
+                V = noise_pred_cond
+                latents_t = latents
+                X_t = latents_t   # latents at timestep t 
+                X_t_scale = X_t / (alpha_prod_t)**(0.5)
+                X_t_back_scale = X_t_scale + epsilon_coefficient * V
+                X_t_back = X_t_back_scale * (alpha_prod_t_back)**(0.5)
+                latents = X_t_back       
+
+                model_output = noise_pred_uncond + 1 * (noise_pred_cond - noise_pred_uncond)
+                latents_predict = ( latents - (1 - alpha_prod_t_back)**(0.5) * model_output ) / (alpha_prod_t_back)**(0.5)
+
+                ######## save needed back prediction 
+                if t_back in dict_latents4predict.keys():
+                    dict_latents4predict[t_back] = latents_predict
+
+                
+                ######## visual sanity check 
+                # idx = 0
+                # if True:
+                #     imgs = self.decode_latents(latents)
+                #     input_img_torch_resized = imgs[idx,:,:,:].permute(1, 2, 0)
+                #     input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                #     input_img_np = (input_img_np * 255).astype(np.uint8)
+                #     Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_inversion/checkinverse_{i}_{t}.png')
+
+                # if True:
+                #     imgs = self.decode_latents(latents_predict)
+                #     input_img_torch_resized = imgs[idx,:,:,:].permute(1, 2, 0)
+                #     input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                #     input_img_np = (input_img_np * 255).astype(np.uint8)
+                #     Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_inversion/checkpredict_{i}_{t}.png')
+                
+    
+            ######## reverse sanity check 
+            latents=latents
+            #latents = (alpha_prod_t_back)**(0.5)*dict_latents4predict[1] + (1 - alpha_prod_t_back)**(0.5) * torch.randn_like(model_output).to(self.device)
+            if back_ratio_list[0] == 1:
+                print('generate from normal')
+                latents = torch.randn_like(latents).to(self.device)
+
+            for i, t in enumerate(reversed(timestep_path[0:back_timeindex_list[-1]])):
+                t = torch.tensor(t + gap, device = self.device)
+                print(t)
+
+                ####### get reverse coefficient 
+                t_prev = t - gap
+                alpha_prod_t = self.scheduler.alphas_cumprod[t]
+                alpha_prod_t_prev = self.scheduler.alphas_cumprod[t_prev] 
+                beta_prod_t = 1 - alpha_prod_t
+                epsilon_coefficient = (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5) - (1 - alpha_prod_t_prev)**(0.5) / (alpha_prod_t_prev)**(0.5)
+
+
+                ######## get reverse direction 
+                t = torch.full((batch_size,), t, dtype=torch.long, device=self.device)
+                t_in = torch.cat([t] * 2)
+                x_in = torch.cat([latents] * 2)
+
+
+                noise_pred = self.unet(
+                    x_in, t_in, encoder_hidden_states=self.embeddings,
+                ).sample
+
+                noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+
+                ######## get prev node 
+                V = noise_pred
+                X_t = latents    
+                X_t_scale = X_t / (alpha_prod_t)**(0.5)
+                epsilon_coefficient = (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5) - (1 - alpha_prod_t_prev)**(0.5) / (alpha_prod_t_prev)**(0.5)
+                X_t_prev_scale = X_t_scale - epsilon_coefficient * V
+                X_t_prev = X_t_prev_scale * (alpha_prod_t_prev)**(0.5)
+                latents = X_t_prev
+
+                model_output = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+                latents_predict = ( latents - (1 - alpha_prod_t_prev)**(0.5) * model_output ) / (alpha_prod_t_prev)**(0.5)
+
+
+    
+            imgs = self.decode_latents(latents_predict[:,:,:,:])
+            #imgs = self.decode_latents(latents[:,:,:,:])
+            imgs_reverse = imgs
+
+
+            image_inverses = []
+            for idx in range(imgs.shape[0]):
+                input_img_torch_resized = imgs_reverse[idx,:,:,:].permute(1, 2, 0)
+                input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                input_img_np = (input_img_np * 255).astype(np.uint8)
+                #Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_train/checkreverse_view_{idx}.png')                
+                image = Image.fromarray((input_img_np).astype(np.uint8))
+                image_inverses.append(image)
+                # idx = 0
+                # if True:
+                #     imgs = self.decode_latents(latents)
+                #     imgs_reverse = imgs
+                #     input_img_torch_resized = imgs[idx,:,:,:].permute(1, 2, 0)
+                #     input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                #     input_img_np = (input_img_np * 255).astype(np.uint8)
+                #     Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_reversion/checkreverse_{i}_{t}.png')
+                    
+
+                # if True:
+                #     imgs = self.decode_latents(latents_predict)
+                #     input_img_torch_resized = imgs[idx,:,:,:].permute(1, 2, 0)
+                #     input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                #     input_img_np = (input_img_np * 255).astype(np.uint8)
+                #     Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_reversion/checkpredict_{i}_{t}.png')
+
+        loss = F.mse_loss( latents_grad , torch.zeros_like(latents_grad ).to(self.device))
+
+        return imgs_reverse, loss, image_inverses  # 16*3*256*256
+
+
+
+
+    # def get_sde_loop_safe(self, pred_rgb, prompts, negative_prompts, back_ratio_list=[0.5], guidance_scale=7.5, as_latent=False):
+
+    #     batch_size = 1
+    #     uncond_tokens = [""] * batch_size
+    #     uncond_inputs = self.tokenizer(
+    #         uncond_tokens,
+    #         padding="max_length",
+    #         max_length=self.tokenizer.model_max_length,
+    #         truncation=True,
+    #         return_tensors="pt",
+    #     )
+    #     uncond_input_ids = uncond_inputs.input_ids
+
+
+
+    #     pred_rgb_512 = F.interpolate(pred_rgb[:,:,:,:], (512, 512), mode='bilinear', align_corners=False)
+    #     latents_target = self.encode_imgs(pred_rgb_512.to(self.dtype))
+
+    #     with torch.no_grad(): 
+    #         torch.manual_seed(0)
+    #         insert_t = 601
+    #         alpha_prod_t = self.scheduler.alphas_cumprod[torch.tensor(insert_t, device = self.device)]
+        
+    #         randv_param = torch.randn(latents_target.shape[0], 4, 64, 64).to(self.device)
+    #         latents = (alpha_prod_t)**(0.5) * (latents_target) + (1 - alpha_prod_t)**(0.5) * ((randv_param))
+    #         latents_t = latents.clone().detach()  # latents at timestep t 
+
+    #         # start SDEedit generation 
+    #         prompt = prompts
+    #         insert_timestep = insert_t
+    #         guidance_scale = 7.5
+
+
+    #         timestep_path = list(range(insert_t, 1, -20))
+    #         timestep_path.append(timestep_path[-1])
+
+    #         for i,t in enumerate(timestep_path[:-1]):
+
+    #             #print(latents[0,0,0,0:5])
+
+    #             t = torch.tensor(t, device = self.device)
+    #             print(t)
+
+    #             # feed text prompt to text encoder
+    #             negative_prompt_embeds = self.text_encoder(
+    #                 input_ids = uncond_input_ids.to(self.device),
+    #                 attention_mask=None,
+    #             )
+    #             negative_prompt_embeds = negative_prompt_embeds[0]
+
+    #             prompt = prompt
+    #             text_inputs = self.tokenizer(
+    #                 prompt ,
+    #                 padding="max_length",
+    #                 max_length=self.tokenizer.model_max_length,
+    #                 truncation=True,
+    #                 return_tensors="pt",
+    #             )
+    #             text_input_ids = text_inputs.input_ids 
+    #             guide_prompt_embeds = self.text_encoder(
+    #                 input_ids = text_input_ids.to(self.device),
+    #                 attention_mask=None,
+    #             )
+    #             guide_prompt_embeds = guide_prompt_embeds[0]
+    #             guide_prompt_embeds = guide_prompt_embeds.to(self.device)
+    #             text_prompt_embeds = guide_prompt_embeds
+
+    #             prompt_embeds = torch.cat([negative_prompt_embeds, text_prompt_embeds])
+
+    #             #prompt_embeds = torch.cat([negative_prompt_embeds, text_prompt_embeds])
+    #             prompt_embeds = torch.cat([negative_prompt_embeds.repeat(latents_target.shape[0], 1, 1),  \
+    #                                             text_prompt_embeds.repeat(latents_target.shape[0], 1, 1)])
+
+
+
+    #             latent_model_input = torch.cat([latents] * 2)
+    #             ts = torch.cat([t.unsqueeze(0)] * latents_target.shape[0] * 2)
+
+    #             noise_pred = self.unet(
+    #                 sample = latent_model_input.to(self.device),
+    #                 timestep = ts.to(self.device),
+    #                 encoder_hidden_states=prompt_embeds.to(self.device),
+    #                 return_dict=False,
+    #             )[0]
+    #             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+    #             guidance_scale = guidance_scale
+                
+    #             noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+    #             #noise_pred = 1.5* noise_pred_text - 0.5* noise_pred_uncond 
+                
+    #             #model_output = noise_pred_text 
+    #             model_output = noise_pred
+
+
+    #             X_t = latents    
+    #             self.scheduler.alphas_cumprod = self.scheduler.alphas_cumprod.to(self.device)
+    #             t_prev = timestep_path[i+1]
+    #             alpha_prod_t = self.scheduler.alphas_cumprod[t]
+    #             alpha_prod_t_prev = self.scheduler.alphas_cumprod[t_prev] if t_prev >= 0 else self.scheduler.final_alpha_cumprod
+    #             beta_prod_t = 1 - alpha_prod_t
+    #             X_t_scale = X_t / (alpha_prod_t)**(0.5)
+    #             epsilon_coefficient = (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5) - (1 - alpha_prod_t_prev)**(0.5) / (alpha_prod_t_prev)**(0.5)
+    #             X_t_prev_scale = X_t_scale - epsilon_coefficient * model_output
+    #             X_t_prev = X_t_prev_scale * (alpha_prod_t_prev)**(0.5)
+    #             latents = X_t_prev
+
+
+
+    #             latents_predict = ( latents - (1 - alpha_prod_t)**(0.5) * model_output ) / (alpha_prod_t)**(0.5)
+                
+
+    #         for idx in range(latents_predict.shape[0]):
+    #             imgs = self.decode_latents(latents_predict[idx:idx+1,:,:,:])
+    #             input_img_torch_resized = imgs[0,:,:,:].permute(1, 2, 0)
+    #             input_img_np = input_img_torch_resized.detach().cpu().numpy()
+    #             input_img_np = (input_img_np * 255).astype(np.uint8)
+    #             Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_train/ablation_view_{idx}.png')                
+                   
+    #     return 
+
+
+
+
+
+
+
+
+
+    def get_sde_loop(self, pred_rgb, prompts, negative_prompts, back_ratio_list=[0.5], index_insert = 20, guidance_scale=7.5, as_latent=False):
+
+        gap = 20
+        start = 1
+        limit = 999
+
+        num_elements = (limit - start) // gap + 1
+        timestep_path = [start + gap * i for i in range(num_elements)]
+
+        back_timeindex_list = []
+        for back_ratio in back_ratio_list:
+            t = np.round(back_ratio * self.num_train_timesteps)
+            closest_index, closest_timestep = min(enumerate(timestep_path), key=lambda x: abs(x[1] - t))
+            back_timeindex_list.append(closest_index)
+
+
+        batch_size = pred_rgb.shape[0]
+        if as_latent:
+            latents = F.interpolate(pred_rgb, (32, 32), mode='bilinear', align_corners=False) * 2 - 1
+        else:
+            pred_rgb_256 = F.interpolate(pred_rgb, (512, 512), mode='bilinear', align_corners=False)
+            latents_grad = self.encode_imgs(pred_rgb_256.to(self.dtype))
+        
+        latents= latents_grad.detach()
+        self.get_text_embeds_batch(prompts, negative_prompts, latents)
+        dict_latents4predict = {}
+        for timeindex in back_timeindex_list:
+            dict_latents4predict[timeindex] = None
+        dict_latents4predict[1] = latents
+
+ 
+        self.scheduler.alphas_cumprod = self.scheduler.alphas_cumprod.to(self.device)
+        
+        index_insert = index_insert
+        t_insert = timestep_path[index_insert]
+
+        t = torch.tensor(t_insert, device = self.device)
+
+        t_back = t + gap
+        alpha_prod_t = self.scheduler.alphas_cumprod[t]
+        alpha_prod_t_back = self.scheduler.alphas_cumprod[t_back] 
+        beta_prod_t = 1 - alpha_prod_t
+        epsilon_coefficient = (1 - alpha_prod_t_back)**(0.5) / (alpha_prod_t_back)**(0.5) - (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5)
+
+        with torch.no_grad():
+            latents = (alpha_prod_t_back)**(0.5)*dict_latents4predict[1] + (1 - alpha_prod_t_back)**(0.5) * torch.randn_like(latents).to(self.device)
+
+            for i, t in enumerate(reversed(timestep_path[0:index_insert])):
+                t = torch.tensor(t + gap, device = self.device)
+                print(t)
+
+                ####### get reverse coefficient 
+                t_prev = t - gap
+                alpha_prod_t = self.scheduler.alphas_cumprod[t]
+                alpha_prod_t_prev = self.scheduler.alphas_cumprod[t_prev] 
+                beta_prod_t = 1 - alpha_prod_t
+                epsilon_coefficient = (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5) - (1 - alpha_prod_t_prev)**(0.5) / (alpha_prod_t_prev)**(0.5)
+
+
+                ######## get reverse direction 
+                t = torch.full((batch_size,), t, dtype=torch.long, device=self.device)
+                t_in = torch.cat([t] * 2)
+                x_in = torch.cat([latents] * 2)
+
+
+                noise_pred = self.unet(
+                    x_in, t_in, encoder_hidden_states=self.embeddings,
+                ).sample
+
+                noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+
+                ######## get prev node 
+                V = noise_pred
+                X_t = latents    
+                X_t_scale = X_t / (alpha_prod_t)**(0.5)
+                epsilon_coefficient = (1 - alpha_prod_t)**(0.5) / (alpha_prod_t)**(0.5) - (1 - alpha_prod_t_prev)**(0.5) / (alpha_prod_t_prev)**(0.5)
+                X_t_prev_scale = X_t_scale - epsilon_coefficient * V
+                X_t_prev = X_t_prev_scale * (alpha_prod_t_prev)**(0.5)
+                latents = X_t_prev
+
+                model_output = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+                latents_predict = ( latents - (1 - alpha_prod_t_prev)**(0.5) * model_output ) / (alpha_prod_t_prev)**(0.5)
+
+       
+            imgs = self.decode_latents(latents[:,:,:,:])
+            imgs_reverse = imgs
+
+
+            #for idx in range(imgs.shape[0]):
+            for idx in range(1):
+                input_img_torch_resized = imgs_reverse[idx,:,:,:].permute(1, 2, 0)
+                input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                input_img_np = (input_img_np * 255).astype(np.uint8)
+                #Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_train/checksde_view_{idx}.png')                
+                image = Image.fromarray((input_img_np).astype(np.uint8))
+
+                # idx = 0
+                # if True:
+                #     imgs = self.decode_latents(latents)
+                #     imgs_reverse = imgs
+                #     input_img_torch_resized = imgs[idx,:,:,:].permute(1, 2, 0)
+                #     input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                #     input_img_np = (input_img_np * 255).astype(np.uint8)
+                #     Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_reversion/checkreverse_{i}_{t}.png')
+                    
+
+                # if True:
+                #     imgs = self.decode_latents(latents_predict)
+                #     input_img_torch_resized = imgs[idx,:,:,:].permute(1, 2, 0)
+                #     input_img_np = input_img_torch_resized.detach().cpu().numpy()
+                #     input_img_np = (input_img_np * 255).astype(np.uint8)
+                #     Image.fromarray((input_img_np).astype(np.uint8)).save(f'./test_reversion/checkpredict_{i}_{t}.png')
+
+        loss = F.mse_loss( latents_grad  , latents_predict)
+
+        return imgs_reverse, loss, image # 16*3*256*256
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
