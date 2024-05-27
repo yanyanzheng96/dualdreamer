@@ -356,7 +356,7 @@ class GUI:
         wandb_logdict["iter"] = i
 
 
-        self.opt.batch_size = 1
+        #self.opt.batch_size = 1
         starter = torch.cuda.Event(enable_timing=True)
         ender = torch.cuda.Event(enable_timing=True)
         starter.record()
@@ -389,7 +389,7 @@ class GUI:
                 ver = 0
                 #hor = np.random.randint(-180, 180)
                 hor = np.random.randint(-45, 45)
-                hor = 15
+                #hor = 15
 
                 # radius = 0
                 radius = np.random.uniform(3, 4) 
@@ -531,8 +531,8 @@ class GUI:
                 with torch.no_grad(): 
                     for t in range(total_samples):
                         print(f'making reverse view {t}/{num_reverse} in frame {b_idx}')
-                        #if t <= num_reverse - 1:
-                        if b_idx == 0:
+                        if t <= num_reverse - 1:
+                        #if b_idx == 0:
                             backratio = 0.7 - radii[_]/10
                             imgs_reverse_batch, loss_inverse, image_inverses_batch = self.guidance_sd.get_inverse_loop(render_views_[t:t+1], prompts = self.opt.prompt, negative_prompts = '', back_ratio_list = [backratio])
 
@@ -542,8 +542,8 @@ class GUI:
                             #image_pt2pil(imgs_reverse_batch[0,:,:,:]).save(f'paper_demo/imageinverse_hor15_{b_idx}.png')
 
     
-                        #if t > num_reverse - 1:
-                        if b_idx > 0:
+                        if t > num_reverse - 1:
+                        #if b_idx > 0:
                             image_inverses.append( image_pt2pil(render_views_[t,:,:,:])  )
                             imgs_reverse.append( render_views_[t:t+1,:,:,:] )
 
