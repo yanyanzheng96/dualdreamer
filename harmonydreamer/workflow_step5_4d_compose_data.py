@@ -187,17 +187,9 @@ class GUI:
 
 
         self.GSlist = []
-        for i in range(self.opt.):
-            renderer_3d = Renderer(sh_degree=self.opt.sh_degree)
-            self.GSlist.append(renderer_3d)
-
-
-        self.GSlist_depth = []
         for i in range(self.opt.batch_size):
             renderer_3d = Renderer(sh_degree=self.opt.sh_degree)
             self.GSlist.append(renderer_3d)
-
-
 
         os.makedirs( os.path.join( self.opt.data_dir , 'demo_cache' ) , exist_ok = True)
         os.makedirs( os.path.join( self.opt.data_dir , 'demo_logs_4D' ) , exist_ok = True)
@@ -216,6 +208,7 @@ class GUI:
 
             self.renderer.initialize( os.path.join(self.opt.case_dir, 'plys_4d', f'model_{b_idx}.ply') )  # torch.Size([17290, 3])
             self.renderer_add1.initialize( os.path.join(self.opt.case_dir, 'plys_4d', 'add', f'model_{b_idx}.ply')  ) # 
+
 
             xyz = self.renderer.gaussians._xyz
             # Step 1: Compute the centroid
@@ -259,10 +252,7 @@ class GUI:
 
             #self.GSlist[b_idx].initialize( os.path.join(self.opt.case_dir, 'plys_4d', f'model_{b_idx}.ply') )
 
-            self.GSlist[b_idx].initialize( os.path.join( self.opt.data_dir, 'demo_logs_plys', 'exp_2024-05-27 11:52:27_4D', 'step_30', f'model_{b_idx}.ply' ) )
-
-
-
+            self.GSlist[b_idx].initialize( os.path.join( self.opt.data_dir, f'demo_cache/test_{b_idx}.ply' ) )
 
             #self.renderer.initialize(num_pts=5000)
             # setup training
