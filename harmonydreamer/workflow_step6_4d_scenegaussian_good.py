@@ -929,7 +929,7 @@ class GUI:
 
 
 
-                if iii % 50 == 0 :
+                if iii % 200 == 0 :
                     # render eval
                     front_list =[]
                     full_list =[]
@@ -981,11 +981,11 @@ class GUI:
 
                     self.GSlist_depth[0].gaussians.save_ply( os.path.join( './test_visual', f'model_test.ply' ) )
                     
-            step_dir = os.path.join( self.opt.data_dir, f'demo_logs_plys/exp_{self.opt.timestamp}_4D' , f'step_{i}')
-            os.makedirs( step_dir, exist_ok=True )
-            for b_idx in range(self.opt.num_frames):
-                self.GSlist_depth[b_idx].gaussians.save_ply( os.path.join( step_dir, f'model_{b_idx}.ply' ) )
-                export_to_gif(full_list, os.path.join( step_dir, f'train_full_step_{i}_hor_{hor}.gif' ) )
+                    step_dir = os.path.join( self.opt.data_dir, f'demo_logs_plys/exp_{self.opt.timestamp}_4D' , f'step_{i}_iter_{iii}')
+                    os.makedirs( step_dir, exist_ok=True )
+                    for b_idx in range(self.opt.num_frames):
+                        self.GSlist_depth[b_idx].gaussians.save_ply( os.path.join( step_dir, f'model_{b_idx}.ply' ) )
+                        export_to_gif(full_list, os.path.join( step_dir, f'train_full_step_{i}_hor_{hor}.gif' ) )
 
             ender.record()
             torch.cuda.synchronize()
@@ -1479,11 +1479,12 @@ class GUI:
                     export_to_gif(front_list, os.path.join( self.opt.data_dir, f'demo_logs_4D/exp_{self.opt.timestamp}_4D/train_front_{self.step}_iter_{iii}_hor_{hor}.gif') )
                     export_to_gif(full_list, os.path.join( self.opt.data_dir, f'demo_logs_4D/exp_{self.opt.timestamp}_4D/train_full_{self.step}_iter_{iii}_hor_{hor}.gif' ) )
 
-            step_dir = os.path.join( self.opt.data_dir, f'demo_logs_plys/exp_{self.opt.timestamp}_4D' , f'step_{i}')
-            os.makedirs( step_dir, exist_ok=True )
-            for b_idx in range(self.opt.num_frames):
-                self.GSlist_depth[b_idx].gaussians.save_ply( os.path.join( step_dir, f'model_{b_idx}.ply' ) )
-                export_to_gif(full_list, os.path.join( step_dir, f'train_full_step_{i}_hor_{hor}.gif' ) )
+
+                    step_dir = os.path.join( self.opt.data_dir, f'demo_logs_plys/exp_{self.opt.timestamp}_4D' , f'step_{i}_iter_{iii}')
+                    os.makedirs( step_dir, exist_ok=True )
+                    for b_idx in range(self.opt.num_frames):
+                        self.GSlist_depth[b_idx].gaussians.save_ply( os.path.join( step_dir, f'model_{b_idx}.ply' ) )
+                        export_to_gif(full_list, os.path.join( step_dir, f'train_full_step_{i}_hor_{hor}.gif' ) )
 
             ender.record()
             torch.cuda.synchronize()

@@ -357,8 +357,6 @@ class GUI:
         sorted_files = sort_filenames(png_files)
 
 
-
-
         file_list = [ os.path.join(file_dir, f) for f in sorted_files]
 
 
@@ -367,6 +365,13 @@ class GUI:
             # load image
             print(f'[INFO] load image from {file}...')
             img = cv2.imread(file, cv2.IMREAD_UNCHANGED)
+
+            # Check if the image has 4 channels (RGBA)
+            if img.shape[-1] == 4:
+                # Convert the image from RGBA to RGB by discarding the alpha channel
+                img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+
+
             if img.shape[-1] == 3:
                 if self.bg_remover is None:
                     self.bg_remover = rembg.new_session()
@@ -381,6 +386,7 @@ class GUI:
             input_img = input_img[..., ::-1].copy()
             self.input_img_list.append(input_img)
             self.input_mask_list.append(input_mask)
+
 
     @torch.no_grad()
     def save_model(self, mode='geo', texture_size=1024, t=0):
