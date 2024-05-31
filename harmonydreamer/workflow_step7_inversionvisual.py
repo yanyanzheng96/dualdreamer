@@ -229,7 +229,7 @@ class GUI:
 
 
         ### ----------------------------------------------------------------------------------------------------
-        hors = [44]*14
+        hors = [-42, -36, -30, -24, -18, -12, -6, 0, 6, 12, 18, 24, 30] #[44]*14
         vers = [0]*14
         radii = [3]*14
         ts = list(range(14))
@@ -516,37 +516,42 @@ opt = OmegaConf.merge(OmegaConf.load(args.config), OmegaConf.from_cli(extras))
 # opt.save_path = 'flower'
 
 opt.debug = False
-os.makedirs( os.path.join( '../demo_output' , opt.run_name ), exist_ok = True )
-os.makedirs( os.path.join( '../demo_output' , opt.run_name, 'ply_3d' ), exist_ok = True )
-os.makedirs( os.path.join( '../demo_output' , opt.run_name, 'pth_4d' ), exist_ok = True )
-os.makedirs( os.path.join( '../demo_output' , opt.run_name, 'plys_4d' ), exist_ok = True )
 
-os.makedirs( os.path.join( '../demo_output' , opt.run_name, 'backgrounds', 'prompt' ), exist_ok = True )
-os.makedirs( os.path.join( '../demo_output' , opt.run_name, 'backgrounds', 'generates' ), exist_ok = True )
+#############################
+opt.data_dir = '/mnt/vita-nas/zy3724/4Dprojects'
+#############################
 
-if not os.path.exists( os.path.join( '../demo_output' , opt.run_name, 'backgrounds', 'prompt', 'seed.txt' ) ):
-    with open( os.path.join( '../demo_output' , opt.run_name, 'backgrounds', 'prompt', 'seed.txt' ) , 'w') as file:
+os.makedirs( os.path.join( opt.data_dir, 'demo_output' , opt.run_name ), exist_ok = True )
+os.makedirs( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'ply_3d' ), exist_ok = True )
+os.makedirs( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'pth_4d' ), exist_ok = True )
+os.makedirs( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'plys_4d' ), exist_ok = True )
+
+os.makedirs( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'backgrounds', 'prompt' ), exist_ok = True )
+os.makedirs( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'backgrounds', 'generates' ), exist_ok = True )
+
+if not os.path.exists( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'backgrounds', 'prompt', 'seed.txt' ) ):
+    with open( os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'backgrounds', 'prompt', 'seed.txt' ) , 'w') as file:
         file.write(str( 0 ))
 
 
 
 
-opt.load_plys = os.path.join( '../demo_logs_plys', opt.plys_name )
+opt.load_plys = os.path.join( opt.data_dir, 'demo_logs_plys', opt.plys_name )
 
 
-opt.load = os.path.join( '../demo_output' , opt.run_name, 'ply_3d', 'model.ply' )
-opt.load_edit = os.path.join( '../demo_output' , opt.run_name, 'logs_ply', opt.ply_name )
+opt.load = os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'ply_3d', 'model.ply' )
+opt.load_edit = os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'logs_ply', opt.ply_name )
 
 
-opt.deform_load = os.path.join( '../demo_output' , opt.run_name, 'pth_4d', 'model' )
+opt.deform_load = os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'pth_4d', 'model' )
 
-opt.save_plys = os.path.join( '../demo_cache' , opt.run_name )
+opt.save_plys = os.path.join( opt.data_dir, 'demo_cache' , opt.run_name )
 os.makedirs( opt.save_plys, exist_ok = True )
 
 opt.num_frames = 14
 
 
-target_dir = os.path.join( '../demo_output' , opt.run_name, 'backgrounds', 'prompt')
+target_dir = os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'backgrounds', 'prompt')
 # Check if the directory exists
 if os.path.exists(target_dir):
     # List files in the directory
@@ -559,12 +564,12 @@ if os.path.exists(target_dir):
         png_path = os.path.join(target_dir, png_files[0])
 
 opt.bg_path = png_path
-opt.case_dir = os.path.join( '../demo_output' , opt.run_name)
+opt.case_dir = os.path.join( opt.data_dir, 'demo_output' , opt.run_name)
 
-opt.bg_dir = os.path.join( '../demo_output' , opt.run_name, 'backgrounds', 'generates')
+opt.bg_dir = os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'backgrounds', 'generates')
 
 
-opt.visual_dir = os.path.join( '../demo_output' , opt.run_name, 'final_visuals')
+opt.visual_dir = os.path.join( opt.data_dir, 'demo_output' , opt.run_name, 'final_visuals')
 os.makedirs( opt.visual_dir, exist_ok = True )
 
 

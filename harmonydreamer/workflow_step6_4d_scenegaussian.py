@@ -442,9 +442,10 @@ class GUI:
     def train_depth(self, i):
 
         self.opt.num_frames = 14
-        num_depth = 5
+        num_depth = 30
 
-
+        # self.opt.num_frames = 2
+        # num_depth = 1
 
         starter = torch.cuda.Event(enable_timing=True)
         ender = torch.cuda.Event(enable_timing=True)
@@ -470,7 +471,7 @@ class GUI:
                 ver = 0
                 #hor = np.random.randint(-180, 180)
                 #hor = np.random.randint(-45, 45)
-                hor = -45 + 18*_
+                hor = -45 + 3*_
                 #hor = 15
 
                 # radius = 0
@@ -638,7 +639,7 @@ class GUI:
                         print(f'making reverse view {t}/{num_reverse} in frame {b_idx}')
                         if t <= num_reverse - 1:
                         #if b_idx == 0:
-                            backratio = 0.7 - radii[_]/10
+                            backratio = 0.6 - radii[_]/10
                             imgs_reverse_batch, loss_inverse, image_inverses_batch = self.guidance_sd.get_inverse_loop(render_views_[t:t+1], prompts = self.opt.prompt, negative_prompts = '', back_ratio_list = [backratio])
 
                             image_inverses = image_inverses + image_inverses_batch
@@ -759,7 +760,7 @@ class GUI:
 
 
             ###########################################################################
-            train_iters = 1001
+            train_iters = 3001
 
             for iii in range(train_iters):
                 # # update lr
@@ -775,10 +776,10 @@ class GUI:
                         for b_idx in range(self.opt.num_frames):
                             xyz_ = self.GSlist[b_idx].gaussians._xyz.detach().cpu().numpy()
 
-                            extra_pts = 5000
+                            extra_pts = 1000
                             x = np.random.uniform(-1, 1, extra_pts)
                             y = np.random.uniform(-1, 1, extra_pts)
-                            z = np.random.uniform(-1, 1, extra_pts)
+                            z = np.random.uniform(-1.5, -1.3, extra_pts)
                             # Stack the points to create an array of shape (num_pts, 3)
                             xyz = np.stack((x, y, z), axis=1)
 
@@ -888,17 +889,17 @@ class GUI:
                 loss_colorconsist = 0
                 #loss_xyzconsist = 0
                 for b_idx in range(1, self.opt.num_frames):
-                    loss_colorconsist = loss_colorconsist + 1000*F.mse_loss( self.GSlist[b_idx].gaussians._features_dc, torch.clone(self.GSlist[0].gaussians._features_dc).detach()) 
+                    loss_colorconsist = loss_colorconsist + 1000*F.mse_loss( self.GSlist_depth[b_idx].gaussians._features_dc, torch.clone(self.GSlist_depth[0].gaussians._features_dc).detach()) 
                     #loss_colorconsist = loss_colorconsist + 1000*F.mse_loss( self.GSlist[b_idx].gaussians._features_dc, torch.clone(self.GSlist[b_idx-1].gaussians._features_dc).detach()) 
 
                     #loss_xyzconsist = loss_xyzconsist + 1000*F.mse_loss( self.GSlist[i].gaussians._xyz, torch.clone(self.GSlist[i-1].gaussians._xyz).detach()) 
 
 
-                #print(f'exp {self.opt.timestamp}, step {self.step}, iter {iii}', 'mse:', loss.item(), 'consist:', loss_colorconsist.item())
-                print(f'exp {self.opt.timestamp}, step {self.step}, iter {iii}', 'mse:', loss.item())
+                print(f'exp {self.opt.timestamp}, step {self.step}, iter {iii}', 'mse:', loss.item(), 'consist:', loss_colorconsist.item())
+                #print(f'exp {self.opt.timestamp}, step {self.step}, iter {iii}', 'mse:', loss.item())
 
 
-                loss = loss 
+                loss = loss + loss_colorconsist
 
                 loss.backward()
 
