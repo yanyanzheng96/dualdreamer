@@ -1,0 +1,196 @@
+[34m[1mwandb[39m[22m: [33mWARNING[39m Saving files without folders. If you want to preserve subdirectories pass base_path to wandb.save, i.e. wandb.save("/mnt/folder/file.h5", base_path="/mnt")
+Loading pipeline components...:   0%|                                                                        | 0/6 [00:00<?, ?it/s]
+Number of points at loading :  1407
+Number of points at loading :  1407
+Number of points at loading :  1407
+Number of points at loading :  1407
+Seed: 888
+
+Loading pipeline components...: 100%|████████████████████████████████████████████████████████████████| 6/6 [00:00<00:00,  8.55it/s]
+  0%|                                                                                                     | 0/2000 [00:00<?, ?it/s]/home/zy3724/miniconda3/envs/dreamgaussian4d/lib/python3.8/site-packages/torchvision/transforms/functional.py:96: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
+[INFO] loaded SD!
+Batch sample: 0
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+15 301
+16 321
+17 341
+18 361
+19 381
+20 401
+21 421
+tensor(441, device='cuda:0')
+tensor(421, device='cuda:0')
+tensor(401, device='cuda:0')
+tensor(381, device='cuda:0')
+tensor(361, device='cuda:0')
+tensor(341, device='cuda:0')
+tensor(321, device='cuda:0')
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 1
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+15 301
+16 321
+17 341
+18 361
+19 381
+20 401
+21 421
+tensor(441, device='cuda:0')
+tensor(421, device='cuda:0')
+tensor(401, device='cuda:0')
+tensor(381, device='cuda:0')
+tensor(361, device='cuda:0')
+tensor(341, device='cuda:0')
+tensor(321, device='cuda:0')
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 2
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+15 301
+16 321
+17 341
+18 361
+19 381
+20 401
+21 421
+tensor(441, device='cuda:0')
+tensor(421, device='cuda:0')
+tensor(401, device='cuda:0')
+tensor(381, device='cuda:0')
+tensor(361, device='cuda:0')
+tensor(341, device='cuda:0')
+tensor(321, device='cuda:0')
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 3
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+15 301
+16 321
+17 341
+18 361
+19 381
+20 401
+21 421
+tensor(441, device='cuda:0')
+tensor(421, device='cuda:0')
+tensor(401, device='cuda:0')
+  0%|                                                                                                     | 0/2000 [00:18<?, ?it/s]
+Traceback (most recent call last):
+  File "workflow_step3_datadir.py", line 1222, in <module>
+    gui.train(opt.iters)
+  File "workflow_step3_datadir.py", line 1063, in train
+    self.train_step(i)
+  File "workflow_step3_datadir.py", line 603, in train_step
+    imgs_reverse_batch, loss_inverse, image_inverses_batch = self.guidance_sd.get_inverse_loop(render_views_[t:t+1], prompts = self.opt.prompt, negative_prompts = '', back_ratio_list = [backratio])
+  File "/home/zy3724/4Dprojects/harmonydreamer/guidance/sd_utils.py", line 408, in get_inverse_loop
+    t = torch.tensor(t + gap, device = self.device)
+KeyboardInterrupt
+tensor(381, device='cuda:0')
+tensor(361, device='cuda:0')
+tensor(341, device='cuda:0')
+tensor(321, device='cuda:0')
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')

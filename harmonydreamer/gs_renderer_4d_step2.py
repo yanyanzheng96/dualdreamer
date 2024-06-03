@@ -191,7 +191,7 @@ class Renderer:
 
         scales_final = self.gaussians.scaling_activation(scales_final)
         rotations_final = self.gaussians.rotation_activation(rotations_final)
-        opacity = self.gaussians.opacity_activation(opacity)
+        opacity_final = self.gaussians.opacity_activation(opacity)
 
 
         # If precomputed colors are provided, use them. Otherwise, if it is desired to precompute colors
@@ -222,13 +222,13 @@ class Renderer:
         means2D = means2D,
         shs = shs,
         colors_precomp = colors_precomp,
-        opacities = opacity,
+        opacities = opacity_final,
         scales = scales_final,
         rotations = rotations_final,
         cov3D_precomp = cov3D_precomp)
 
-
         rendered_image = rendered_image.clamp(0, 1)
+
 
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
         # They will be excluded from value updates used in the splitting criteria.
@@ -248,8 +248,6 @@ class Renderer:
     ):
 
         for b_idx in range(14):
-
-
             means3D = self.gaussians.get_xyz
             scales = self.gaussians._scaling
             rotations = self.gaussians._rotation

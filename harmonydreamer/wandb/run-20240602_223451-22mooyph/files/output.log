@@ -1,0 +1,1558 @@
+
+[34m[1mwandb[39m[22m: [33mWARNING[39m Saving files without folders. If you want to preserve subdirectories pass base_path to wandb.save, i.e. wandb.save("/mnt/folder/file.h5", base_path="/mnt")
+Number of points at loading :  1407
+Number of points at loading :  1407
+Number of points at loading :  1407
+Number of points at loading :  1407
+Seed: 888
+[INFO] loading SD...
+Loading pipeline components...: 100%|████████████████████████████████████████████████████████████████████| 6/6 [00:00<00:00,  8.26it/s]
+  0%|                                                                                                         | 0/2000 [00:00<?, ?it/s]/home/zy3724/miniconda3/envs/dreamgaussian4d/lib/python3.8/site-packages/torchvision/transforms/functional.py:96: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
+[INFO] loaded SD!
+Batch sample: 0
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 1
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 2
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 3
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 4
+Batch sample: 5
+Batch sample: 6
+Batch sample: 7
+Batch sample: 8
+Batch sample: 9
+Batch sample: 10
+Batch sample: 11
+Batch sample: 12
+Batch sample: 13
+Batch sample: 14
+Batch sample: 15
+Batch sample: 16
+Batch sample: 17
+Batch sample: 18
+Batch sample: 19
+Batch sample: 20
+Batch sample: 21
+Batch sample: 22
+Batch sample: 23
+0
+uploading ply
+1
+Number of points at initialisation :  1407
+2
+densify
+3
+densify
+4
+densify
+5
+densify
+6
+densify
+7
+densify
+8
+densify
+9
+densify
+10
+densify
+11
+densify
+12
+densify
+13
+densify
+14
+densify
+15
+densify
+16
+densify
+17
+densify
+18
+densify
+19
+densify
+20
+densify
+21
+densify
+22
+densify
+23
+densify
+24
+densify
+25
+densify
+26
+densify
+27
+densify
+28
+densify
+29
+densify
+30
+densify
+31
+densify
+32
+densify
+33
+densify
+34
+densify
+35
+densify
+36
+densify
+37
+densify
+38
+densify
+39
+densify
+40
+densify
+41
+densify
+42
+densify
+43
+densify
+44
+densify
+45
+densify
+46
+densify
+47
+densify
+48
+densify
+49
+densify
+50
+densify
+51
+densify
+52
+densify
+53
+densify
+54
+densify
+55
+densify
+56
+densify
+57
+densify
+58
+densify
+59
+densify
+60
+densify
+61
+densify
+62
+densify
+63
+densify
+64
+densify
+65
+densify
+66
+densify
+67
+densify
+68
+densify
+69
+densify
+70
+densify
+71
+densify
+72
+densify
+73
+densify
+74
+densify
+75
+densify
+76
+densify
+77
+densify
+78
+densify
+79
+densify
+80
+densify
+81
+densify
+82
+densify
+83
+densify
+84
+densify
+85
+densify
+86
+densify
+87
+densify
+88
+densify
+89
+densify
+90
+densify
+91
+densify
+92
+densify
+93
+densify
+94
+densify
+95
+densify
+96
+densify
+97
+densify
+98
+densify
+99
+densify
+100
+densify
+101
+densify
+102
+densify
+103
+densify
+104
+densify
+105
+densify
+106
+densify
+107
+densify
+108
+densify
+109
+densify
+110
+densify
+111
+densify
+112
+densify
+113
+densify
+114
+densify
+115
+densify
+116
+densify
+117
+densify
+118
+densify
+119
+densify
+120
+densify
+121
+densify
+122
+densify
+123
+densify
+124
+densify
+125
+densify
+126
+densify
+127
+densify
+128
+densify
+129
+densify
+130
+densify
+131
+densify
+132
+densify
+133
+densify
+134
+densify
+135
+densify
+136
+densify
+137
+densify
+138
+densify
+139
+densify
+140
+densify
+141
+densify
+142
+densify
+143
+densify
+144
+densify
+145
+densify
+146
+densify
+147
+densify
+148
+densify
+149
+densify
+150
+densify
+151
+densify
+152
+densify
+153
+densify
+154
+densify
+155
+densify
+156
+densify
+157
+densify
+158
+densify
+159
+densify
+160
+densify
+161
+densify
+162
+densify
+163
+densify
+164
+densify
+165
+densify
+166
+densify
+167
+densify
+168
+densify
+169
+densify
+170
+densify
+171
+densify
+172
+densify
+173
+densify
+174
+densify
+175
+densify
+176
+densify
+177
+densify
+178
+densify
+179
+densify
+180
+densify
+181
+densify
+182
+densify
+183
+densify
+184
+densify
+185
+densify
+186
+densify
+187
+densify
+188
+densify
+189
+densify
+190
+densify
+191
+densify
+192
+densify
+193
+densify
+194
+densify
+195
+densify
+196
+densify
+197
+densify
+198
+densify
+199
+densify
+200
+uploading ply
+densify
+201
+densify
+202
+densify
+203
+densify
+204
+densify
+205
+densify
+206
+densify
+207
+densify
+208
+densify
+209
+densify
+210
+densify
+211
+densify
+212
+densify
+213
+densify
+214
+densify
+215
+densify
+216
+densify
+217
+densify
+218
+densify
+219
+densify
+220
+densify
+221
+densify
+222
+densify
+223
+densify
+224
+densify
+225
+densify
+226
+densify
+227
+densify
+228
+densify
+229
+densify
+230
+densify
+231
+densify
+232
+densify
+233
+densify
+234
+densify
+235
+densify
+236
+densify
+237
+densify
+238
+densify
+239
+densify
+240
+densify
+241
+densify
+242
+densify
+243
+densify
+244
+densify
+245
+densify
+246
+densify
+247
+densify
+248
+densify
+249
+densify
+250
+densify
+251
+densify
+252
+densify
+253
+densify
+254
+densify
+255
+densify
+256
+densify
+257
+densify
+258
+densify
+259
+densify
+260
+densify
+261
+densify
+262
+densify
+263
+densify
+264
+densify
+265
+densify
+266
+densify
+267
+densify
+268
+densify
+269
+densify
+270
+densify
+271
+densify
+272
+densify
+273
+densify
+274
+densify
+275
+densify
+276
+densify
+277
+densify
+278
+densify
+279
+densify
+280
+densify
+281
+densify
+282
+densify
+283
+densify
+284
+densify
+285
+densify
+286
+densify
+287
+densify
+288
+densify
+289
+densify
+290
+densify
+291
+densify
+292
+densify
+293
+densify
+294
+densify
+295
+densify
+296
+densify
+297
+densify
+298
+densify
+299
+densify
+300
+densify
+301
+densify
+302
+densify
+303
+densify
+304
+densify
+305
+densify
+306
+densify
+307
+densify
+308
+densify
+309
+densify
+310
+densify
+311
+densify
+312
+densify
+313
+densify
+314
+densify
+315
+densify
+316
+densify
+317
+densify
+318
+densify
+319
+densify
+320
+densify
+321
+densify
+322
+densify
+323
+densify
+324
+densify
+325
+densify
+326
+densify
+327
+densify
+328
+densify
+329
+densify
+330
+densify
+331
+densify
+332
+densify
+333
+densify
+334
+densify
+335
+densify
+336
+densify
+337
+densify
+338
+densify
+339
+densify
+340
+densify
+341
+densify
+342
+densify
+343
+densify
+344
+densify
+345
+densify
+346
+densify
+347
+densify
+348
+densify
+349
+densify
+350
+densify
+351
+densify
+352
+densify
+353
+densify
+354
+densify
+355
+densify
+356
+densify
+357
+densify
+358
+densify
+359
+densify
+360
+densify
+361
+densify
+362
+densify
+363
+densify
+364
+densify
+365
+densify
+366
+densify
+367
+densify
+368
+densify
+369
+densify
+370
+densify
+371
+densify
+372
+densify
+373
+densify
+374
+densify
+375
+densify
+376
+densify
+377
+densify
+378
+densify
+379
+densify
+380
+densify
+381
+densify
+382
+densify
+383
+densify
+384
+densify
+385
+densify
+386
+densify
+387
+densify
+388
+densify
+389
+densify
+390
+densify
+391
+densify
+392
+densify
+393
+densify
+394
+densify
+395
+densify
+396
+densify
+397
+densify
+398
+densify
+399
+densify
+400
+uploading ply
+densify
+  0%|                                                                                              | 1/2000 [01:29<49:48:44, 89.71s/it]/home/zy3724/miniconda3/envs/dreamgaussian4d/lib/python3.8/site-packages/torchvision/transforms/functional.py:96: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
+Batch sample: 0
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 1
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 2
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 3
+0 1
+1 21
+2 41
+3 61
+4 81
+5 101
+6 121
+7 141
+8 161
+9 181
+10 201
+11 221
+12 241
+13 261
+14 281
+tensor(301, device='cuda:0')
+tensor(281, device='cuda:0')
+tensor(261, device='cuda:0')
+tensor(241, device='cuda:0')
+tensor(221, device='cuda:0')
+tensor(201, device='cuda:0')
+tensor(181, device='cuda:0')
+tensor(161, device='cuda:0')
+tensor(141, device='cuda:0')
+tensor(121, device='cuda:0')
+tensor(101, device='cuda:0')
+tensor(81, device='cuda:0')
+tensor(61, device='cuda:0')
+tensor(41, device='cuda:0')
+tensor(21, device='cuda:0')
+Batch sample: 4
+Batch sample: 5
+Batch sample: 6
+Batch sample: 7
+Batch sample: 8
+Batch sample: 9
+Batch sample: 10
+Batch sample: 11
+Batch sample: 12
+Batch sample: 13
+Batch sample: 14
+Batch sample: 15
+Batch sample: 16
+Batch sample: 17
+Batch sample: 18
+Batch sample: 19
+Batch sample: 20
+Batch sample: 21
+Batch sample: 22
+Batch sample: 23
+0
+uploading ply
+1
+Number of points at initialisation :  21009
+2
+densify
+3
+densify
+4
+densify
+5
+densify
+6
+densify
+7
+densify
+8
+densify
+9
+densify
+10
+densify
+11
+densify
+12
+densify
+13
+densify
+14
+densify
+15
+densify
+16
+densify
+17
+densify
+18
+densify
+19
+densify
+20
+densify
+21
+densify
+22
+densify
+23
+densify
+24
+densify
+25
+densify
+26
+densify
+27
+densify
+28
+densify
+29
+densify
+30
+densify
+31
+densify
+32
+densify
+33
+densify
+34
+densify
+35
+densify
+36
+densify
+37
+densify
+38
+densify
+39
+densify
+40
+densify
+41
+densify
+42
+densify
+43
+densify
+44
+densify
+45
+densify
+46
+densify
+47
+densify
+48
+densify
+49
+densify
+50
+densify
+51
+densify
+52
+densify
+53
+densify
+54
+densify
+55
+densify
+56
+densify
+57
+densify
+58
+densify
+59
+densify
+60
+densify
+61
+densify
+62
+densify
+63
+densify
+64
+densify
+65
+densify
+66
+densify
+67
+densify
+68
+densify
+69
+densify
+70
+densify
+71
+densify
+72
+densify
+73
+densify
+74
+densify
+75
+densify
+76
+densify
+77
+densify
+78
+densify
+79
+densify
+80
+densify
+81
+densify
+82
+densify
+83
+densify
+84
+densify
+85
+densify
+86
+densify
+87
+densify
+88
+densify
+89
+densify
+90
+densify
+91
+densify
+92
+densify
+93
+densify
+94
+densify
+95
+densify
+96
+densify
+97
+densify
+98
+densify
+99
+densify
+100
+densify
+101
+densify
+102
+densify
+103
+densify
+104
+densify
+105
+densify
+106
+densify
+107
+densify
+108
+densify
+109
+densify
+110
+densify
+111
+densify
+112
+densify
+113
+densify
+114
+densify
+115
+densify
+116
+densify
+117
+densify
+118
+densify
+119
+densify
+120
+densify
+121
+densify
+122
+densify
+123
+densify
+124
+densify
+125
+densify
+126
+densify
+127
+densify
+128
+densify
+129
+densify
+130
+densify
+131
+densify
+132
+densify
+133
+densify
+134
+densify
+135
+densify
+136
+densify
+137
+densify
+138
+densify
+139
+densify
+140
+densify
+141
+densify
+142
+densify
+143
+densify
+144
+densify
+145
+densify
+146
+densify
+147
+densify
+148
+densify
+149
+densify
+150
+densify
+151
+densify
+152
+densify
+153
+densify
+154
+densify
+155
+densify
+156
+densify
+157
+densify
+158
+densify
+159
+densify
+160
+densify
+161
+densify
+162
+densify
+163
+densify
+164
+densify
+165
+densify
+166
+densify
+167
+densify
+168
+densify
+169
+densify
+170
+densify
+171
+densify
+172
+densify
+173
+densify
+174
+densify
+175
+densify
+176
+densify
+177
+densify
+178
+densify
+179
+densify
+180
+densify
+181
+densify
+182
+densify
+183
+densify
+184
+densify
+185
+densify
+186
+densify
+187
+densify
+188
+densify
+189
+densify
+190
+densify
+191
+densify
+192
+densify
+193
+densify
+194
+densify
+195
+densify
+196
+densify
+197
+densify
+198
+densify
+199
+densify
+200
+uploading ply
+densify
+201
+densify
+202
+densify
+203
+densify
+204
+densify
+205
+densify
+206
+densify
+207
+densify
+208
+densify
+209
+densify
+210
+densify
+211
+densify
+212
+densify
+213
+densify
+214
+densify
+215
+  0%|                                                                                             | 1/2000 [02:28<82:37:27, 148.80s/it]
+Traceback (most recent call last):
+  File "workflow_step3_datadir.py", line 1222, in <module>
+    gui.train(opt.iters)
+  File "workflow_step3_datadir.py", line 1063, in train
+    self.train_step(i)
+  File "workflow_step3_datadir.py", line 921, in train_step
+    self.renderer.gaussians.densify_and_prune(max_grad = 0.05, min_opacity=0.01, extent=0.5, max_screen_size=1)
+  File "/home/zy3724/4Dprojects/harmonydreamer/gaussian_model.py", line 528, in densify_and_prune
+    torch.cuda.empty_cache()
+  File "/home/zy3724/miniconda3/envs/dreamgaussian4d/lib/python3.8/site-packages/torch/cuda/memory.py", line 133, in empty_cache
+    torch._C._cuda_emptyCache()
+KeyboardInterrupt
+densify
+216
+densify
+217
+densify
+218
+densify

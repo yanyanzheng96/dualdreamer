@@ -68,8 +68,8 @@ opt = OmegaConf.merge(OmegaConf.load(args.config), OmegaConf.from_cli(extras))
 
 
 
-
-workdir = '../demo_output'
+datadir = '/mnt/vita-nas/zy3724/4Dprojects'
+workdir = os.path.join( datadir, 'demo_output' ) 
 category = opt.run_name # 'case_1', 'case_2', ...
 
 

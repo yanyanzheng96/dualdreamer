@@ -1,0 +1,64 @@
+wandb_version: 1
+
+load:
+  desc: null
+  value: /mnt/vita-nas/zy3724/4Dprojects/demo_output/catcloud/ply_3d/model.ply
+savename:
+  desc: null
+  value: null
+input:
+  desc: null
+  value: null
+save_path:
+  desc: null
+  value: null
+batch_size:
+  desc: null
+  value: 24
+prompt:
+  desc: null
+  value: running cat
+start_vsd:
+  desc: null
+  value: 2000
+_wandb:
+  desc: null
+  value:
+    python_version: 3.8.19
+    cli_version: 0.16.5
+    framework: huggingface
+    huggingface_version: 4.39.0
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1717385871.0
+    t:
+      1:
+      - 1
+      - 11
+      - 41
+      - 49
+      - 55
+      - 71
+      - 83
+      - 105
+      2:
+      - 1
+      - 11
+      - 41
+      - 49
+      - 55
+      - 71
+      - 83
+      - 105
+      3:
+      - 3
+      - 13
+      - 16
+      - 23
+      - 61
+      4: 3.8.19
+      5: 0.16.5
+      6: 4.39.0
+      8:
+      - 5
+      13: linux-x86_64

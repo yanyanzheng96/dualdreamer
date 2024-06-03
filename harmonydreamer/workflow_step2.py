@@ -12,6 +12,7 @@ import re
 
 from cam_utils import orbit_camera, OrbitCamera
 from gs_renderer_4d_step2 import Renderer, MiniCam
+from gs_renderer_3d_clean import Renderer_3d, MiniCam_3d
 
 from grid_put import mipmap_linear_grid_put_2d
 from mesh import Mesh, safe_normalize
@@ -50,6 +51,7 @@ class GUI:
 
         # renderer
         self.renderer = Renderer(sh_degree=self.opt.sh_degree)
+        self.renderer_3d = Renderer_3d(sh_degree=self.opt.sh_degree)
         self.gaussain_scale_factor = 1
 
         # input image
@@ -612,6 +614,7 @@ class GUI:
         delta_hor = 360 / nframes
         time = 0
         delta_time = 1
+        tensor1 = []
         for _ in range(nframes):
             pose = orbit_camera(self.opt.elevation, hor-180, self.opt.radius)
             cur_cam = MiniCam(
@@ -627,6 +630,8 @@ class GUI:
             with torch.no_grad():
                 outputs = self.renderer.render(cur_cam)
 
+
+            tensor1.append( outputs["image"] )
             out = outputs["image"].cpu().detach().numpy().astype(np.float32)
             out = np.transpose(out, (1, 2, 0))
             out = Image.fromarray(np.uint8(out*255))
@@ -646,14 +651,15 @@ class GUI:
 
         # render eval
         image_list =[]
-        nframes = 14
+        nframes = 14 *5
         hor = 180
         delta_hor = 360 / nframes
         time = 0
         delta_time = 1
+        tensor2 = []
         for _ in range(nframes):
             pose = orbit_camera(self.opt.elevation, hor-180, self.opt.radius)
-            cur_cam = MiniCam(
+            cur_cam = MiniCam_3d(
                 pose,
                 512,
                 512,
@@ -661,13 +667,14 @@ class GUI:
                 self.cam.fovx,
                 self.cam.near,
                 self.cam.far,
-                time=time
             )
 
-            self.renderer.initialize( os.path.join(self.opt.workdir, 'plys_4d', f'model_{_}.ply') )  
+            self.renderer_3d.initialize( os.path.join(self.opt.workdir, 'plys_4d', f'model_{int(_%14)}.ply') )  
             with torch.no_grad():
-                outputs = self.renderer.render(cur_cam)
+                outputs = self.renderer_3d.render(cur_cam)
 
+
+            tensor2.append( outputs["image"].detach() )
             out = outputs["image"].cpu().detach().numpy().astype(np.float32)
             out = np.transpose(out, (1, 2, 0))
             out = Image.fromarray(np.uint8(out*255))
@@ -677,7 +684,6 @@ class GUI:
             hor = (hor+delta_hor) % 360
 
         export_to_gif(image_list, os.path.join(self.opt.workdir, 'plys_4d', f'rotating4d_plys.gif'))
-
 
 
 
