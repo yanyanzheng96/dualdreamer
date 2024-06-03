@@ -266,9 +266,10 @@ class GUI:
         self.optimizer = self.renderer.gaussians.optimizer
 
         # # fix attributes 
-        self.renderer.gaussians._opacity.requires_grad = True
-        self.renderer.gaussians._scaling.requires_grad = True
-        self.renderer.gaussians._rotation.requires_grad = True
+        self.renderer.gaussians._xyz.requires_grad = False
+        self.renderer.gaussians._opacity.requires_grad = False
+        self.renderer.gaussians._scaling.requires_grad = False
+        self.renderer.gaussians._rotation.requires_grad = False
 
         # ### loadng segmentation model
         # print(f"[INFO] loading fastsam ...")
@@ -679,7 +680,7 @@ class GUI:
             for iii in range(401):
                 # # update lr
                 # self.renderer.gaussians.update_learning_rate(iii)
-                print(iii)
+                print(self.opt.timestamp, iii)
                 self.step += 1
         
 
@@ -904,26 +905,26 @@ class GUI:
 
                 self.optimizer.zero_grad()
 
-                if iii>1 and self.renderer.gaussians._xyz.shape[0]<25000:
-                    # densify and prune
-                    #if self.step >= self.opt.density_start_iter and self.step <= self.opt.density_end_iter:
-                    if True:
-                        viewspace_point_tensor, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
-                        self.renderer.gaussians.max_radii2D[visibility_filter] = torch.max(self.renderer.gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
-                        self.renderer.gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+                # if iii>1 and self.renderer.gaussians._xyz.shape[0]<25000:
+                #     # densify and prune
+                #     #if self.step >= self.opt.density_start_iter and self.step <= self.opt.density_end_iter:
+                #     if True:
+                #         viewspace_point_tensor, visibility_filter, radii = out["viewspace_points"], out["visibility_filter"], out["radii"]
+                #         self.renderer.gaussians.max_radii2D[visibility_filter] = torch.max(self.renderer.gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+                #         self.renderer.gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                        #if self.step % self.opt.densification_interval == 0:
+                #         #if self.step % self.opt.densification_interval == 0:
 
-                            # size_threshold = 20 if self.step > self.opt.opacity_reset_interval else None
-                            # self.opt.densify_grad_threshold = 0.05
-                        if iii%10 == 0:
-                            print("densify")
-                            self.renderer.gaussians.densify_and_prune(max_grad = 0.05, min_opacity=0.01, extent=0.5, max_screen_size=1)
+                #             # size_threshold = 20 if self.step > self.opt.opacity_reset_interval else None
+                #             # self.opt.densify_grad_threshold = 0.05
+                #         if iii%10 == 0:
+                #             print("densify")
+                #             self.renderer.gaussians.densify_and_prune(max_grad = 0.05, min_opacity=0.01, extent=0.5, max_screen_size=1)
                         
-                        # #if self.step % self.opt.opacity_reset_interval == 0:
-                        # if iii == 400:
-                        #     print('reset opacity')
-                        #     self.renderer.gaussians.reset_opacity()
+                #         # #if self.step % self.opt.opacity_reset_interval == 0:
+                #         # if iii == 400:
+                #         #     print('reset opacity')
+                #         #     self.renderer.gaussians.reset_opacity()
 
             
 
